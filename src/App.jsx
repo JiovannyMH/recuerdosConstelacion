@@ -526,20 +526,30 @@ function App() {
     return Math.max(0, Math.min(START_MONTH - 1, timelineList.length - 1));
   }
 
+  function getLastMemoryIndexForList(list) {
+    const timelineList = normalizeTimelineConstellations(list);
+
+    if (timelineList.length === 0) {
+      return 0;
+    }
+
+    for (let index = timelineList.length - 1; index >= 0; index -= 1) {
+      const items = Array.isArray(timelineList[index]?.items) ? timelineList[index].items : [];
+      if (items.length > 0) {
+        return index;
+      }
+    }
+
+    return timelineList.length - 1;
+  }
+
   function applySessionStartPreference(username, list, mode) {
     const timelineList = normalizeTimelineConstellations(list);
     const safeMode = mode === "ultimo" ? "ultimo" : "inicio";
 
     if (safeMode === "ultimo") {
-      const savedPosition = getStoredLastViewPosition(username);
-      if (savedPosition) {
-        setTimelineYear(savedPosition.timelineYear);
-        setCurrentIndex(Math.min(savedPosition.currentIndex, Math.max(timelineList.length - 1, 0)));
-        return;
-      }
-
       setTimelineYear(Math.max(START_YEAR, FLOWERS_YEAR));
-      setCurrentIndex(Math.max(timelineList.length - 1, 0));
+      setCurrentIndex(getLastMemoryIndexForList(timelineList));
       return;
     }
 
@@ -742,6 +752,12 @@ function App() {
     });
   }, [displayConstellations.length, normalizedIndex, timelineYear, user?.username]);
 
+  useEffect(() => {
+    if (user?.role === "viewer") {
+      setViewOnlyMode(true);
+    }
+  }, [user?.role]);
+
   async function refreshMemories() {
     const data = await getMemories();
     const list = Array.isArray(data.constellations) ? data.constellations : [];
@@ -898,6 +914,18 @@ function App() {
     setModalImageOffset({ x: 0, y: 0 });
     setIsModalImageDragging(false);
     setModalImageZoomScale(MODAL_IMAGE_ZOOM_DEFAULT);
+  }
+
+  function setSelectedMemoryDirect(memory, constellationId) {
+    if (!memory) {
+      return;
+    }
+
+    setIsModalImageZoomed(false);
+    setModalImageOffset({ x: 0, y: 0 });
+    setIsModalImageDragging(false);
+    setModalImageZoomScale(MODAL_IMAGE_ZOOM_DEFAULT);
+    setSelectedMemory({ ...memory, constellationId });
   }
 
   async function addConstellation(event) {
@@ -1344,6 +1372,112 @@ function App() {
     setCurrentIndex(targetIndex);
   }
 
+  function findAdjacentConstellationWithItems(direction) {
+    if (!displayConstellations.length || !currentConstellation) {
+      return null;
+    }
+
+    let probeYear = timelineYear;
+    let probeConstellation = currentConstellation;
+    const maxSteps = Math.max(displayConstellations.length * 3, 18);
+
+    for (let step = 0; step < maxSteps; step += 1) {
+      const probeMonth = Number(probeConstellation?.month);
+      if (!Number.isFinite(probeMonth)) {
+        return null;
+      }
+
+      const target = getAdjacentTimelinePoint(probeYear, probeMonth, direction);
+      if (target.year < START_YEAR) {
+        return null;
+      }
+
+      const targetIndex = displayConstellations.findIndex(
+        (constellation) => Number(constellation.month) === target.month,
+      );
+
+      if (targetIndex < 0) {
+        return null;
+      }
+
+      const targetConstellation = displayConstellations[targetIndex];
+      const targetItems = targetConstellation?.items || [];
+
+      if (targetItems.length > 0) {
+        return {
+          year: target.year,
+          index: targetIndex,
+          constellation: targetConstellation,
+        };
+      }
+
+      probeYear = target.year;
+      probeConstellation = targetConstellation;
+    }
+
+    return null;
+  }
+
+  function navigateSelectedMemory(direction) {
+    if (!selectedMemory || !currentConstellation) {
+      return;
+    }
+
+    const items = currentConstellation.items || [];
+    if (items.length === 0) {
+      return;
+    }
+
+    const currentMemoryIndex = items.findIndex((item) => item.id === selectedMemory.id);
+    if (currentMemoryIndex < 0) {
+      const fallbackItem = direction > 0 ? items[0] : items[items.length - 1];
+      setSelectedMemoryDirect(fallbackItem, currentConstellation.id);
+      return;
+    }
+
+    const nextMemoryIndex = currentMemoryIndex + direction;
+    if (nextMemoryIndex >= 0 && nextMemoryIndex < items.length) {
+      setSelectedMemoryDirect(items[nextMemoryIndex], currentConstellation.id);
+      return;
+    }
+
+    const adjacent = findAdjacentConstellationWithItems(direction);
+    if (!adjacent) {
+      return;
+    }
+
+    const adjacentItems = adjacent.constellation.items || [];
+    const boundaryItem = direction > 0 ? adjacentItems[0] : adjacentItems[adjacentItems.length - 1];
+
+    setTimelineYear(adjacent.year);
+    setCurrentIndex(adjacent.index);
+    setSelectedMemoryDirect(boundaryItem, adjacent.constellation.id);
+  }
+
+  useEffect(() => {
+    if (!isSkyFullscreen || !selectedMemory) {
+      return;
+    }
+
+    function handleFullscreenMemoryKeys(event) {
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        navigateSelectedMemory(1);
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        navigateSelectedMemory(-1);
+      }
+    }
+
+    window.addEventListener("keydown", handleFullscreenMemoryKeys);
+    return () => {
+      window.removeEventListener("keydown", handleFullscreenMemoryKeys);
+    };
+  }, [isSkyFullscreen, selectedMemory, navigateSelectedMemory]);
+
   async function toggleSkyFullscreen() {
     const panel = skyPanelRef.current;
 
@@ -1448,6 +1582,20 @@ function App() {
   const activeHoveredStarId =
     (currentConstellation?.items || []).some((item) => item.id === hoveredStarId) ? hoveredStarId : "";
 
+  const selectedMemoryPosition = useMemo(() => {
+    if (!selectedMemory || !currentConstellation) {
+      return { current: 0, total: 0 };
+    }
+
+    const items = currentConstellation.items || [];
+    const current = items.findIndex((item) => item.id === selectedMemory.id);
+
+    return {
+      current: current >= 0 ? current + 1 : 0,
+      total: items.length,
+    };
+  }, [currentConstellation, selectedMemory]);
+
   const memoryModal = selectedMemory ? (
     <section className="memory-modal" role="dialog" aria-modal="true">
       <div
@@ -1462,6 +1610,19 @@ function App() {
         >
           Cerrar
         </button>
+        {isSkyFullscreen && (
+          <div className="memory-nav-controls">
+            <button type="button" className="ghost" onClick={() => navigateSelectedMemory(-1)}>
+              Anterior
+            </button>
+            <span>
+              {selectedMemoryPosition.current}/{selectedMemoryPosition.total || 0}
+            </span>
+            <button type="button" className="ghost" onClick={() => navigateSelectedMemory(1)}>
+              Siguiente
+            </button>
+          </div>
+        )}
         <h3>{selectedMemory.title}</h3>
         {selectedMemory.description && <p>{selectedMemory.description}</p>}
 
@@ -1618,14 +1779,16 @@ function App() {
         <div className="header-actions">
           <p className="chip">{user.displayName}</p>
           <p className="chip role">Rol: {user.role}</p>
-          <label className="switch">
-            <input
-              type="checkbox"
-              checked={viewOnlyMode}
-              onChange={(event) => setViewOnlyMode(event.target.checked)}
-            />
-            Modo solo vista
-          </label>
+          {user.role !== "viewer" && (
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={viewOnlyMode}
+                onChange={(event) => setViewOnlyMode(event.target.checked)}
+              />
+              Modo solo vista
+            </label>
+          )}
           <button type="button" className="ghost" onClick={handleLogout}>
             Salir
           </button>
