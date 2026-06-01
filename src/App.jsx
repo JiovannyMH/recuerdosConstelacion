@@ -30,6 +30,13 @@ const MAX_UPLOAD_IMAGE_INPUT_BYTES = 20 * 1024 * 1024;
 const TARGET_IMAGE_DATA_URL_BYTES = 950 * 1024;
 const MAX_IMAGE_DIMENSION = 1600;
 const PROJECT_MEMORIES_IMAGE_PREFIX = "/recuerdos/";
+const IS_LOCAL_APP =
+  import.meta.env.DEV ||
+  import.meta.env.VITE_FORCE_LOCAL_API === "true" ||
+  (typeof window !== "undefined" &&
+    (window.location.protocol === "file:" ||
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1"));
 const MONTH_NAMES = [
   "Enero",
   "Febrero",
@@ -1050,6 +1057,11 @@ function App() {
   }
 
   function exportCurrentMemories() {
+    if (!IS_LOCAL_APP) {
+      setError("La exportacion JSON solo esta disponible en modo local");
+      return;
+    }
+
     try {
       const payload = {
         exportedAt: new Date().toISOString(),
@@ -1158,7 +1170,11 @@ function App() {
         }
       }
 
-      const isAssigningToExisting = Boolean(newMemory.targetMemoryId);
+      if (!IS_LOCAL_APP && newMemory.targetMemoryId) {
+        throw new Error("En la web desplegada no se permite editar estrellas existentes");
+      }
+
+      const isAssigningToExisting = IS_LOCAL_APP && Boolean(newMemory.targetMemoryId);
       const data = await updateMemories(
         token,
         isAssigningToExisting
@@ -2252,7 +2268,7 @@ function App() {
             </p>
           </section>
 
-          {canEdit && (
+          {canEdit && IS_LOCAL_APP && (
             <section className="panel-block">
               <h3>Sincronizar por GitHub</h3>
               <p>
@@ -2328,57 +2344,63 @@ function App() {
                   </label>
                   <label>
                     Estrella de la constelación (opcional)
-                    <div className="star-picker" ref={starPickerRef}>
-                      <button
-                        type="button"
-                        className="star-picker-trigger"
-                        onClick={() => setIsStarPickerOpen((prev) => !prev)}
-                        onBlur={() => {
-                          setHoveredStarId("");
-                        }}
-                        aria-haspopup="listbox"
-                        aria-expanded={isStarPickerOpen}
-                      >
-                        {selectedTargetStar?.title || "Crear nueva estrella"}
-                      </button>
+                    {IS_LOCAL_APP ? (
+                      <div className="star-picker" ref={starPickerRef}>
+                        <button
+                          type="button"
+                          className="star-picker-trigger"
+                          onClick={() => setIsStarPickerOpen((prev) => !prev)}
+                          onBlur={() => {
+                            setHoveredStarId("");
+                          }}
+                          aria-haspopup="listbox"
+                          aria-expanded={isStarPickerOpen}
+                        >
+                          {selectedTargetStar?.title || "Crear nueva estrella"}
+                        </button>
 
-                      {isStarPickerOpen && (
-                        <div className="star-picker-menu" role="listbox">
-                          <button
-                            type="button"
-                            className={`star-picker-option ${newMemory.targetMemoryId ? "" : "is-selected"}`}
-                            onClick={() => {
-                              setNewMemory((prev) => ({ ...prev, targetMemoryId: "" }));
-                              setHoveredStarId("");
-                              setIsStarPickerOpen(false);
-                            }}
-                          >
-                            Crear nueva estrella
-                          </button>
-
-                          {availableStarsForAssignment.map((memory) => (
+                        {isStarPickerOpen && (
+                          <div className="star-picker-menu" role="listbox">
                             <button
-                              key={memory.id}
                               type="button"
-                              className={`star-picker-option ${
-                                newMemory.targetMemoryId === memory.id ? "is-selected" : ""
-                              }`}
-                              onMouseEnter={() => setHoveredStarId(memory.id)}
-                              onMouseLeave={() => setHoveredStarId("")}
-                              onFocus={() => setHoveredStarId(memory.id)}
-                              onBlur={() => setHoveredStarId("")}
+                              className={`star-picker-option ${newMemory.targetMemoryId ? "" : "is-selected"}`}
                               onClick={() => {
-                                setNewMemory((prev) => ({ ...prev, targetMemoryId: memory.id }));
-                                setHoveredStarId(memory.id);
+                                setNewMemory((prev) => ({ ...prev, targetMemoryId: "" }));
+                                setHoveredStarId("");
                                 setIsStarPickerOpen(false);
                               }}
                             >
-                              {memory.title}
+                              Crear nueva estrella
                             </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+
+                            {availableStarsForAssignment.map((memory) => (
+                              <button
+                                key={memory.id}
+                                type="button"
+                                className={`star-picker-option ${
+                                  newMemory.targetMemoryId === memory.id ? "is-selected" : ""
+                                }`}
+                                onMouseEnter={() => setHoveredStarId(memory.id)}
+                                onMouseLeave={() => setHoveredStarId("")}
+                                onFocus={() => setHoveredStarId(memory.id)}
+                                onBlur={() => setHoveredStarId("")}
+                                onClick={() => {
+                                  setNewMemory((prev) => ({ ...prev, targetMemoryId: memory.id }));
+                                  setHoveredStarId(memory.id);
+                                  setIsStarPickerOpen(false);
+                                }}
+                              >
+                                {memory.title}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="memory-note">
+                        En la web publicada no se permite editar estrellas existentes para mantener la sincronía.
+                      </p>
+                    )}
                   </label>
                   <label>
                     Tipo
@@ -2439,7 +2461,7 @@ function App() {
                       por ejemplo <strong>/recuerdos/nuestro-viaje.jpg</strong>.
                     </p>
                   )}
-                  {!newMemory.targetMemoryId && (
+                  {(!IS_LOCAL_APP || !newMemory.targetMemoryId) && (
                     <div className="grid-2">
                       <label>
                         X (%)
@@ -2468,7 +2490,7 @@ function App() {
                     </div>
                   )}
                   <button type="submit">
-                    {newMemory.targetMemoryId ? "Asignar a estrella" : "Guardar recuerdo"}
+                    {IS_LOCAL_APP && newMemory.targetMemoryId ? "Asignar a estrella" : "Guardar recuerdo"}
                   </button>
                 </form>
               </section>
