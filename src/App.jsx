@@ -360,6 +360,26 @@ function getMemoryForTimeline(memory, constellationMonth, timelineYearValue) {
   };
 }
 
+function isCompleteMemoryForNavigation(memory) {
+  if (!memory) {
+    return false;
+  }
+
+  if (hasRealImageMemory(memory)) {
+    return true;
+  }
+
+  const type = String(memory.type || "").trim().toLowerCase();
+  const url = String(memory.url || "").trim();
+  const description = String(memory.description || "").trim();
+
+  if (type === "video" && Boolean(url)) {
+    return true;
+  }
+
+  return description.length > 0;
+}
+
 function normalizeTimelineConstellations(list) {
   const source = Array.isArray(list) ? list : [];
   const monthlyConstellations = source.filter(
@@ -1561,7 +1581,7 @@ function App() {
     setCurrentIndex(targetIndex);
   }
 
-  function findAdjacentConstellationWithItems(direction) {
+  function findAdjacentConstellationWithItems(direction, requireCompleteMemory = false) {
     if (!displayConstellations.length || !currentConstellation) {
       return null;
     }
@@ -1593,6 +1613,19 @@ function App() {
       const targetItems = targetConstellation?.items || [];
 
       if (targetItems.length > 0) {
+        if (requireCompleteMemory) {
+          const targetMonth = Number(targetConstellation?.month);
+          const hasCompleteMemory = targetItems.some((item) =>
+            isCompleteMemoryForNavigation(getMemoryForTimeline(item, targetMonth, target.year)),
+          );
+
+          if (!hasCompleteMemory) {
+            probeYear = target.year;
+            probeConstellation = targetConstellation;
+            continue;
+          }
+        }
+
         return {
           year: target.year,
           index: targetIndex,
@@ -1613,30 +1646,63 @@ function App() {
     }
 
     const items = currentConstellation.items || [];
+    const currentMonth = Number(currentConstellation?.month);
     if (items.length === 0) {
       return;
     }
 
     const currentMemoryIndex = items.findIndex((item) => item.id === selectedMemory.id);
     if (currentMemoryIndex < 0) {
-      const fallbackItem = direction > 0 ? items[0] : items[items.length - 1];
-      setSelectedMemoryDirect(fallbackItem, currentConstellation.id);
+      for (
+        let probeIndex = direction > 0 ? 0 : items.length - 1;
+        probeIndex >= 0 && probeIndex < items.length;
+        probeIndex += direction
+      ) {
+        const visibleProbe = getMemoryForTimeline(items[probeIndex], currentMonth, timelineYear);
+        if (isCompleteMemoryForNavigation(visibleProbe)) {
+          setSelectedMemoryDirect(visibleProbe, currentConstellation.id);
+          return;
+        }
+      }
       return;
     }
 
-    const nextMemoryIndex = currentMemoryIndex + direction;
-    if (nextMemoryIndex >= 0 && nextMemoryIndex < items.length) {
-      setSelectedMemoryDirect(items[nextMemoryIndex], currentConstellation.id);
-      return;
+    for (
+      let probeIndex = currentMemoryIndex + direction;
+      probeIndex >= 0 && probeIndex < items.length;
+      probeIndex += direction
+    ) {
+      const visibleProbe = getMemoryForTimeline(items[probeIndex], currentMonth, timelineYear);
+      if (isCompleteMemoryForNavigation(visibleProbe)) {
+        setSelectedMemoryDirect(visibleProbe, currentConstellation.id);
+        return;
+      }
     }
 
-    const adjacent = findAdjacentConstellationWithItems(direction);
+    const adjacent = findAdjacentConstellationWithItems(direction, true);
     if (!adjacent) {
       return;
     }
 
     const adjacentItems = adjacent.constellation.items || [];
-    const boundaryItem = direction > 0 ? adjacentItems[0] : adjacentItems[adjacentItems.length - 1];
+    const adjacentMonth = Number(adjacent.constellation?.month);
+    let boundaryItem = null;
+
+    for (
+      let probeIndex = direction > 0 ? 0 : adjacentItems.length - 1;
+      probeIndex >= 0 && probeIndex < adjacentItems.length;
+      probeIndex += direction
+    ) {
+      const visibleProbe = getMemoryForTimeline(adjacentItems[probeIndex], adjacentMonth, adjacent.year);
+      if (isCompleteMemoryForNavigation(visibleProbe)) {
+        boundaryItem = visibleProbe;
+        break;
+      }
+    }
+
+    if (!boundaryItem) {
+      return;
+    }
 
     setTimelineYear(adjacent.year);
     setCurrentIndex(adjacent.index);
