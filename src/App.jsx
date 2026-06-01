@@ -571,13 +571,29 @@ function App() {
     return timelineList.length - 1;
   }
 
+  function resolveInitialYearForMonth(monthValue) {
+    if (!Number.isFinite(monthValue)) {
+      return Math.max(START_YEAR, FLOWERS_YEAR);
+    }
+
+    // Months from START_MONTH to December belong to the first year of the story.
+    if (monthValue >= START_MONTH) {
+      return START_YEAR;
+    }
+
+    // Months before START_MONTH belong to the following year.
+    return Math.max(START_YEAR + 1, FLOWERS_YEAR);
+  }
+
   function applySessionStartPreference(username, list, mode) {
     const timelineList = normalizeTimelineConstellations(list);
     const safeMode = mode === "ultimo" ? "ultimo" : "inicio";
 
     if (safeMode === "ultimo") {
-      setTimelineYear(Math.max(START_YEAR, FLOWERS_YEAR));
-      setCurrentIndex(getLastMemoryIndexForList(timelineList));
+      const targetIndex = getLastMemoryIndexForList(timelineList);
+      const targetMonth = Number(timelineList[targetIndex]?.month);
+      setTimelineYear(resolveInitialYearForMonth(targetMonth));
+      setCurrentIndex(targetIndex);
       return;
     }
 
