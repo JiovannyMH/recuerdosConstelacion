@@ -11,6 +11,7 @@ const LOCAL_ROLE_OVERRIDES_KEY = "anniversary_local_role_overrides";
 const LOCAL_CONSTELLATIONS_KEY = "anniversary_local_constellations";
 const LOCAL_TOKEN_PREFIX = "local-anniversary-token.";
 const LOCAL_ALLOWED_ROLES = ["viewer", "editor", "admin"];
+const LOCAL_TOKEN_DURATION_MS = 12 * 60 * 60 * 1000;
 const FORCE_LOCAL_API =
   import.meta.env.VITE_FORCE_LOCAL_API === "true" ||
   (typeof window !== "undefined" && window.location.protocol === "file:");
@@ -205,7 +206,7 @@ function sanitizeUser(user) {
 function createLocalToken(user) {
   const payload = {
     username: user.username,
-    exp: Date.now() + 30 * 24 * 60 * 60 * 1000,
+    exp: Date.now() + LOCAL_TOKEN_DURATION_MS,
   };
 
   return `${LOCAL_TOKEN_PREFIX}${window.btoa(JSON.stringify(payload))}`;

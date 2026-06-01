@@ -116,7 +116,8 @@ export function applyRoleOverrides(users, roleOverrides) {
 }
 
 export function createToken(payload) {
-  const expiresInDays = Number(process.env.APP_TOKEN_DAYS || 30);
+  const configuredDays = Number(process.env.APP_TOKEN_DAYS || 0.5);
+  const expiresInDays = Number.isFinite(configuredDays) && configuredDays > 0 ? configuredDays : 0.5;
   const data = {
     ...payload,
     exp: Date.now() + expiresInDays * 24 * 60 * 60 * 1000,
