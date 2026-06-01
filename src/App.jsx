@@ -1130,23 +1130,31 @@ function App() {
 
       if (newMemory.type === "image") {
         if (!newMemory.url.trim()) {
-          throw new Error("Para imagen, indica una ruta del proyecto dentro de /recuerdos/");
+          throw new Error("Para imagen, sube un archivo o indica una ruta /recuerdos/...");
         }
 
-        if (isExternalMediaUrl(newMemory.url)) {
-          throw new Error("Las imagenes deben venir del proyecto. Usa /recuerdos/nombre-archivo.jpg");
-        }
+        const imageUrl = String(newMemory.url || "").trim();
+        const isDataImageUrl = /^data:image\//i.test(imageUrl);
+        const isProjectImagePath = imageUrl.startsWith(PROJECT_MEMORIES_IMAGE_PREFIX);
+        const isRelativeProjectImagePath =
+          imageUrl.startsWith("recuerdos/") ||
+          imageUrl.startsWith("./recuerdos/") ||
+          imageUrl.startsWith("public/recuerdos/") ||
+          imageUrl.startsWith("/public/recuerdos/");
+        const isExternalImageUrl = isExternalMediaUrl(imageUrl);
 
-        if (isDataMediaUrl(newMemory.url)) {
-          throw new Error("No se permite data URL para imagenes. Usa archivos en public/recuerdos");
-        }
-
-        if (!normalizedImagePath.startsWith(PROJECT_MEMORIES_IMAGE_PREFIX)) {
-          throw new Error("La ruta de imagen debe iniciar en /recuerdos/");
-        }
-
-        if (!hasSupportedImageExtension(normalizedImagePath)) {
-          throw new Error("Formato de imagen no soportado. Usa png, jpg, jpeg, webp, gif o svg");
+        if (isDataImageUrl) {
+          // File uploads in the browser are stored as data URLs.
+        } else if (isProjectImagePath || isRelativeProjectImagePath) {
+          if (!hasSupportedImageExtension(normalizedImagePath)) {
+            throw new Error("Formato de imagen no soportado. Usa png, jpg, jpeg, webp, gif o svg");
+          }
+        } else if (isExternalImageUrl) {
+          if (!hasSupportedImageExtension(imageUrl)) {
+            throw new Error("La URL externa debe terminar en png, jpg, jpeg, webp, gif o svg");
+          }
+        } else {
+          throw new Error("Usa una imagen subida desde archivo, una ruta /recuerdos/... o una URL valida");
         }
       }
 
@@ -1162,7 +1170,10 @@ function App() {
                 type: newMemory.type,
                 title: newMemory.title,
                 description: newMemory.description,
-                url: newMemory.type === "image" ? normalizedImagePath : newMemory.url,
+                url:
+                  newMemory.type === "image" && !/^data:image\//i.test(String(newMemory.url || "").trim())
+                    ? normalizeProjectImagePath(newMemory.url)
+                    : newMemory.url,
               },
             }
           : {
@@ -1172,7 +1183,10 @@ function App() {
                 type: newMemory.type,
                 title: newMemory.title,
                 description: newMemory.description,
-                url: newMemory.type === "image" ? normalizedImagePath : newMemory.url,
+                url:
+                  newMemory.type === "image" && !/^data:image\//i.test(String(newMemory.url || "").trim())
+                    ? normalizeProjectImagePath(newMemory.url)
+                    : newMemory.url,
                 x: Number(newMemory.x),
                 y: Number(newMemory.y),
               },
@@ -1206,12 +1220,6 @@ function App() {
 
     if (!isImage && !isVideo) {
       setError("Solo puedes subir imagenes o videos");
-      setMemoryFileInputKey((prev) => prev + 1);
-      return;
-    }
-
-    if (isImage) {
-      setError("Para imagenes usa archivos del proyecto en public/recuerdos y escribe la ruta /recuerdos/archivo.jpg");
       setMemoryFileInputKey((prev) => prev + 1);
       return;
     }
@@ -2409,7 +2417,7 @@ function App() {
                     <input
                       key={memoryFileInputKey}
                       type="file"
-                      accept="video/*"
+                      accept="image/*,video/*"
                       onChange={handleMemoryFileChange}
                     />
                   </label>
@@ -2427,8 +2435,8 @@ function App() {
                   </label>
                   {newMemory.type === "image" && (
                     <p className="memory-note">
-                      Guarda tus imagenes en <strong>public/recuerdos/</strong> y usa la ruta
-                      publica, por ejemplo <strong>/recuerdos/nuestro-viaje.jpg</strong>.
+                      Puedes subir imagen desde archivo o usar ruta en <strong>public/recuerdos/</strong>,
+                      por ejemplo <strong>/recuerdos/nuestro-viaje.jpg</strong>.
                     </p>
                   )}
                   {!newMemory.targetMemoryId && (
