@@ -1,0 +1,160 @@
+{
+  "generatedAt": "2026-06-01T05:01:06.821Z",
+  "sourceDir": "C:\\Users\\IT\\Downloads",
+  "destinationDir": "public/recuerdos",
+  "count": 19,
+  "memories": [
+    {
+      "id": "recuerdo-001",
+      "title": "WhatsApp Image 2026-05-29 at 12.54.40 AM",
+      "fileName": "001-whatsapp-image-2026-05-29-at-12-54-40-am.jpeg",
+      "publicUrl": "/recuerdos/001-whatsapp-image-2026-05-29-at-12-54-40-am.jpeg",
+      "sizeBytes": 76718,
+      "sourceName": "WhatsApp Image 2026-05-29 at 12.54.40 AM.jpeg"
+    },
+    {
+      "id": "recuerdo-002",
+      "title": "WhatsApp Image 2026-05-31 at 4.32.19 PM",
+      "fileName": "002-whatsapp-image-2026-05-31-at-4-32-19-pm.jpeg",
+      "publicUrl": "/recuerdos/002-whatsapp-image-2026-05-31-at-4-32-19-pm.jpeg",
+      "sizeBytes": 138830,
+      "sourceName": "WhatsApp Image 2026-05-31 at 4.32.19 PM.jpeg"
+    },
+    {
+      "id": "recuerdo-003",
+      "title": "dexter",
+      "fileName": "003-dexter.jpg",
+      "publicUrl": "/recuerdos/003-dexter.jpg",
+      "sizeBytes": 487606,
+      "sourceName": "dexter.jpg"
+    },
+    {
+      "id": "recuerdo-004",
+      "title": "favicon",
+      "fileName": "004-favicon.png",
+      "publicUrl": "/recuerdos/004-favicon.png",
+      "sizeBytes": 1172857,
+      "sourceName": "favicon.png"
+    },
+    {
+      "id": "recuerdo-005",
+      "title": "WhatsApp Image 2026-05-31 at 8.02.07 PM",
+      "fileName": "005-whatsapp-image-2026-05-31-at-8-02-07-pm.jpeg",
+      "publicUrl": "/recuerdos/005-whatsapp-image-2026-05-31-at-8-02-07-pm.jpeg",
+      "sizeBytes": 115973,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.02.07 PM.jpeg"
+    },
+    {
+      "id": "recuerdo-006",
+      "title": "WhatsApp Image 2026-05-31 at 8.17.16 PM",
+      "fileName": "006-whatsapp-image-2026-05-31-at-8-17-16-pm.jpeg",
+      "publicUrl": "/recuerdos/006-whatsapp-image-2026-05-31-at-8-17-16-pm.jpeg",
+      "sizeBytes": 58695,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.17.16 PM.jpeg"
+    },
+    {
+      "id": "recuerdo-007",
+      "title": "WhatsApp Image 2026-05-31 at 8.20.53 PM",
+      "fileName": "007-whatsapp-image-2026-05-31-at-8-20-53-pm.jpeg",
+      "publicUrl": "/recuerdos/007-whatsapp-image-2026-05-31-at-8-20-53-pm.jpeg",
+      "sizeBytes": 89748,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.20.53 PM.jpeg"
+    },
+    {
+      "id": "recuerdo-008",
+      "title": "WhatsApp Image 2026-05-31 at 8.25.44 PM",
+      "fileName": "008-whatsapp-image-2026-05-31-at-8-25-44-pm.jpeg",
+      "publicUrl": "/recuerdos/008-whatsapp-image-2026-05-31-at-8-25-44-pm.jpeg",
+      "sizeBytes": 168646,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.25.44 PM.jpeg"
+    },
+    {
+      "id": "recuerdo-009",
+      "title": "WhatsApp Image 2026-05-31 at 8.28.09 PM",
+      "fileName": "009-whatsapp-image-2026-05-31-at-8-28-09-pm.jpeg",
+      "publicUrl": "/recuerdos/009-whatsapp-image-2026-05-31-at-8-28-09-pm.jpeg",
+      "sizeBytes": 76875,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.28.09 PM.jpeg"
+    },
+    {
+      "id": "recuerdo-010",
+      "title": "WhatsApp Image 2026-05-31 at 8.29.52 PM",
+      "fileName": "010-whatsapp-image-2026-05-31-at-8-29-52-pm.jpeg",
+      "publicUrl": "/recuerdos/010-whatsapp-image-2026-05-31-at-8-29-52-pm.jpeg",
+      "sizeBytes": 90086,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.29.52 PM.jpeg"
+    },
+    {
+      "id": "recuerdo-011",
+      "title": "WhatsApp Image 2026-05-31 at 8.33.53 PM",
+      "fileName": "011-whatsapp-image-2026-05-31-at-8-33-53-pm.jpeg",
+      "publicUrl": "/recuerdos/011-whatsapp-image-2026-05-31-at-8-33-53-pm.jpeg",
+      "sizeBytes": 240726,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.33.53 PM.jpeg"
+    },
+    {
+      "id": "recuerdo-012",
+      "title": "WhatsApp Image 2026-05-31 at 8.33.53 PM (1)",
+      "fileName": "012-whatsapp-image-2026-05-31-at-8-33-53-pm-1.jpeg",
+      "publicUrl": "/recuerdos/012-whatsapp-image-2026-05-31-at-8-33-53-pm-1.jpeg",
+      "sizeBytes": 217181,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.33.53 PM (1).jpeg"
+    },
+    {
+      "id": "recuerdo-013",
+      "title": "WhatsApp Image 2026-05-31 at 8.33.52 PM",
+      "fileName": "013-whatsapp-image-2026-05-31-at-8-33-52-pm.jpeg",
+      "publicUrl": "/recuerdos/013-whatsapp-image-2026-05-31-at-8-33-52-pm.jpeg",
+      "sizeBytes": 154377,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.33.52 PM.jpeg"
+    },
+    {
+      "id": "recuerdo-014",
+      "title": "WhatsApp Image 2026-05-31 at 8.33.52 PM (1)",
+      "fileName": "014-whatsapp-image-2026-05-31-at-8-33-52-pm-1.jpeg",
+      "publicUrl": "/recuerdos/014-whatsapp-image-2026-05-31-at-8-33-52-pm-1.jpeg",
+      "sizeBytes": 123489,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.33.52 PM (1).jpeg"
+    },
+    {
+      "id": "recuerdo-015",
+      "title": "WhatsApp Image 2026-05-31 at 8.33.52 PM (2)",
+      "fileName": "015-whatsapp-image-2026-05-31-at-8-33-52-pm-2.jpeg",
+      "publicUrl": "/recuerdos/015-whatsapp-image-2026-05-31-at-8-33-52-pm-2.jpeg",
+      "sizeBytes": 125503,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.33.52 PM (2).jpeg"
+    },
+    {
+      "id": "recuerdo-016",
+      "title": "WhatsApp Image 2026-05-31 at 8.50.14 PM",
+      "fileName": "016-whatsapp-image-2026-05-31-at-8-50-14-pm.jpeg",
+      "publicUrl": "/recuerdos/016-whatsapp-image-2026-05-31-at-8-50-14-pm.jpeg",
+      "sizeBytes": 221002,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.50.14 PM.jpeg"
+    },
+    {
+      "id": "recuerdo-017",
+      "title": "WhatsApp Image 2026-05-31 at 8.54.20 PM",
+      "fileName": "017-whatsapp-image-2026-05-31-at-8-54-20-pm.jpeg",
+      "publicUrl": "/recuerdos/017-whatsapp-image-2026-05-31-at-8-54-20-pm.jpeg",
+      "sizeBytes": 96983,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.54.20 PM.jpeg"
+    },
+    {
+      "id": "recuerdo-018",
+      "title": "WhatsApp Image 2026-05-31 at 8.54.22 PM",
+      "fileName": "018-whatsapp-image-2026-05-31-at-8-54-22-pm.jpeg",
+      "publicUrl": "/recuerdos/018-whatsapp-image-2026-05-31-at-8-54-22-pm.jpeg",
+      "sizeBytes": 908802,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.54.22 PM.jpeg"
+    },
+    {
+      "id": "recuerdo-019",
+      "title": "WhatsApp Image 2026-05-31 at 8.54.22 PM (1)",
+      "fileName": "019-whatsapp-image-2026-05-31-at-8-54-22-pm-1.jpeg",
+      "publicUrl": "/recuerdos/019-whatsapp-image-2026-05-31-at-8-54-22-pm-1.jpeg",
+      "sizeBytes": 856766,
+      "sourceName": "WhatsApp Image 2026-05-31 at 8.54.22 PM (1).jpeg"
+    }
+  ]
+}

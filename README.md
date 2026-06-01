@@ -62,6 +62,20 @@ Nota:
 - El campo de subida directa en el formulario queda reservado para videos.
 - Si agregas una imagen nueva al proyecto, haz commit y push para que Netlify la publique.
 
+### Importar imagenes desde Descargas
+
+Si quieres copiar automaticamente tus imagenes al proyecto:
+
+```bash
+npm run import:recuerdos
+```
+
+Esto hace lo siguiente:
+
+- Copia imagenes desde tu carpeta `Downloads` a `public/recuerdos/`.
+- Renombra archivos a un formato seguro para rutas web.
+- Genera `public/recuerdos/recuerdos-manifest.json` con las rutas `/recuerdos/...` listas para usar en los recuerdos.
+
 Si subes archivo local, intenta que no pese demasiado. El proyecto limita la carga a 8 MB por recuerdo para evitar problemas con Netlify.
 
 ## Desarrollo local
