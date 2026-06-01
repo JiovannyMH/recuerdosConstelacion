@@ -23,9 +23,9 @@ const DEFAULT_USERS = [
     role: "admin",
   },
   {
-    username: "novia",
-    password: "clave_novia",
-    displayName: "Ella",
+    username: "Ibeth",
+    password: "IbeJio2026",
+    displayName: "Ibeth",
     role: "viewer",
   },
 ];
