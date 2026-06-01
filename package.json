@@ -11,7 +11,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "import:recuerdos": "node scripts/import-recuerdos.mjs"
+    "import:recuerdos": "node scripts/import-recuerdos.mjs",
+    "sync:recuerdos": "node scripts/sync-recuerdos-proyecto.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "^10.7.8",

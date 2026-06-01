@@ -840,6 +840,30 @@ function App() {
     }
   }
 
+  function exportCurrentMemories() {
+    try {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        constellations,
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const dateTag = new Date().toISOString().replace(/[:.]/g, "-");
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `recuerdos-export-${dateTag}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setMessage("Exportacion lista. Guarda el JSON en Descargas y ejecuta npm run sync:recuerdos");
+      setError("");
+    } catch {
+      setError("No se pudo exportar recuerdos");
+    }
+  }
+
   function closeSelectedMemory() {
     setSelectedMemory(null);
     setIsModalImageZoomed(false);
@@ -1842,6 +1866,19 @@ function App() {
               año.
             </p>
           </section>
+
+          {canEdit && (
+            <section className="panel-block">
+              <h3>Sincronizar por GitHub</h3>
+              <p>
+                Exporta tus recuerdos actuales a JSON y luego sincronizalos al proyecto con
+                <strong> npm run sync:recuerdos</strong> antes de hacer commit.
+              </p>
+              <button type="button" className="ghost" onClick={exportCurrentMemories}>
+                Exportar recuerdos (JSON)
+              </button>
+            </section>
+          )}
 
           {canEdit ? (
             <>

@@ -76,6 +76,27 @@ Esto hace lo siguiente:
 - Renombra archivos a un formato seguro para rutas web.
 - Genera `public/recuerdos/recuerdos-manifest.json` con las rutas `/recuerdos/...` listas para usar en los recuerdos.
 
+### Sincronizar recuerdos locales al proyecto (opcion 2)
+
+Para que los recuerdos creados localmente se publiquen en Netlify via GitHub:
+
+1. En la app, usa el boton **Exportar recuerdos (JSON)**.
+2. Se descargara un archivo como `recuerdos-export-YYYY-MM-DD....json`.
+3. En el proyecto, ejecuta:
+
+```bash
+npm run sync:recuerdos
+```
+
+4. El comando toma el export mas reciente de Descargas y actualiza `shared/user-constellations.mjs`.
+5. Haz commit y push para que Netlify despliegue esos cambios.
+
+Opcional: puedes pasar una ruta manual.
+
+```bash
+npm run sync:recuerdos -- C:/ruta/al/archivo/recuerdos-export.json
+```
+
 Si subes archivo local, intenta que no pese demasiado. El proyecto limita la carga a 8 MB por recuerdo para evitar problemas con Netlify.
 
 ## Desarrollo local

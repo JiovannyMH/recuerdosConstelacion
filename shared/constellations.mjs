@@ -1,4 +1,6 @@
-export const DEFAULT_CONSTELLATIONS = {
+import { USER_CONSTELLATIONS } from "./user-constellations.mjs";
+
+const BASE_CONSTELLATIONS = {
   constellations: [
     {
       id: "month-01-capricornus",
@@ -210,6 +212,93 @@ export const DEFAULT_CONSTELLATIONS = {
     },
   ],
 };
+
+function cloneData(data) {
+  return JSON.parse(JSON.stringify(data));
+}
+
+function normalizeConstellation(input, index) {
+  const fallbackId = `custom-${index + 1}`;
+  const rawItems = Array.isArray(input?.items) ? input.items : [];
+  const items = rawItems
+    .filter((item) => item && item.id)
+    .map((item) => ({
+      id: String(item.id),
+      type: ["image", "video", "text"].includes(String(item.type)) ? String(item.type) : "text",
+      title: String(item.title || "Sin titulo"),
+      description: String(item.description || ""),
+      url: item.url ? String(item.url) : "",
+      x: Number.isFinite(Number(item.x)) ? Number(item.x) : 50,
+      y: Number.isFinite(Number(item.y)) ? Number(item.y) : 50,
+    }));
+
+  const validIds = new Set(items.map((item) => item.id));
+  const connections = Array.isArray(input?.connections)
+    ? input.connections
+        .filter((pair) => Array.isArray(pair) && pair.length === 2)
+        .map((pair) => [String(pair[0]), String(pair[1])])
+        .filter(([fromId, toId]) => validIds.has(fromId) && validIds.has(toId) && fromId !== toId)
+    : [];
+
+  return {
+    id: input?.id ? String(input.id) : fallbackId,
+    month: Number.isInteger(input?.month) ? input.month : undefined,
+    title: String(input?.title || `Constelacion ${index + 1}`),
+    subtitle: String(input?.subtitle || ""),
+    items,
+    connections,
+  };
+}
+
+function mergeConstellationItems(baseItems, userItems) {
+  const mergedById = new Map((baseItems || []).map((item) => [item.id, cloneData(item)]));
+
+  (userItems || []).forEach((item) => {
+    mergedById.set(item.id, cloneData(item));
+  });
+
+  return Array.from(mergedById.values());
+}
+
+function mergeProjectConstellations(baseData, userData) {
+  const baseList = Array.isArray(baseData?.constellations) ? baseData.constellations : [];
+  const userList = Array.isArray(userData?.constellations)
+    ? userData.constellations.map((constellation, index) => normalizeConstellation(constellation, index))
+    : [];
+
+  const mergedById = new Map(baseList.map((constellation) => [constellation.id, cloneData(constellation)]));
+
+  userList.forEach((userConstellation) => {
+    const existing = mergedById.get(userConstellation.id);
+
+    if (!existing) {
+      mergedById.set(userConstellation.id, cloneData(userConstellation));
+      return;
+    }
+
+    const mergedItems = mergeConstellationItems(existing.items, userConstellation.items);
+    const mergedItemIds = new Set(mergedItems.map((item) => item.id));
+    const effectiveConnections =
+      Array.isArray(userConstellation.connections) && userConstellation.connections.length > 0
+        ? userConstellation.connections
+        : existing.connections || [];
+
+    mergedById.set(userConstellation.id, {
+      ...existing,
+      ...userConstellation,
+      items: mergedItems,
+      connections: effectiveConnections.filter(
+        (pair) => Array.isArray(pair) && pair.length === 2 && mergedItemIds.has(pair[0]) && mergedItemIds.has(pair[1]),
+      ),
+    });
+  });
+
+  return {
+    constellations: Array.from(mergedById.values()),
+  };
+}
+
+export const DEFAULT_CONSTELLATIONS = mergeProjectConstellations(BASE_CONSTELLATIONS, USER_CONSTELLATIONS);
 
 export function mergeMissingDefaultConstellations(data) {
   const currentConstellations = Array.isArray(data?.constellations) ? data.constellations : [];
