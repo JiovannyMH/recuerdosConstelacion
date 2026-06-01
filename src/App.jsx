@@ -416,6 +416,7 @@ function App() {
   const [isStarPickerOpen, setIsStarPickerOpen] = useState(false);
   const [hoveredStarId, setHoveredStarId] = useState("");
   const [sessionStartMode, setSessionStartMode] = useState("inicio");
+  const [sessionStartModeDirty, setSessionStartModeDirty] = useState(false);
   const [isModalImageZoomed, setIsModalImageZoomed] = useState(false);
   const [modalImageOffset, setModalImageOffset] = useState({ x: 0, y: 0 });
   const [isModalImageDragging, setIsModalImageDragging] = useState(false);
@@ -454,8 +455,10 @@ function App() {
       ? 0
       : Math.min(currentIndex, displayConstellations.length - 1);
   const currentConstellation = displayConstellations[normalizedIndex] || null;
-  const canEdit = !viewOnlyMode && ["admin", "editor"].includes(user?.role);
-  const canManageUsers = !viewOnlyMode && user?.role === "admin";
+  const normalizedUserRole = String(user?.role || "").trim().toLowerCase();
+  const isViewerRole = normalizedUserRole === "viewer";
+  const canEdit = !viewOnlyMode && ["admin", "editor"].includes(normalizedUserRole);
+  const canManageUsers = !viewOnlyMode && normalizedUserRole === "admin";
   const startIndex = Math.max(0, Math.min(START_MONTH - 1, Math.max(displayConstellations.length - 1, 0)));
   const canGoPrevious = !(timelineYear === START_YEAR && normalizedIndex <= startIndex);
 
@@ -753,10 +756,10 @@ function App() {
   }, [displayConstellations.length, normalizedIndex, timelineYear, user?.username]);
 
   useEffect(() => {
-    if (user?.role === "viewer") {
+    if (isViewerRole) {
       setViewOnlyMode(true);
     }
-  }, [user?.role]);
+  }, [isViewerRole]);
 
   async function refreshMemories() {
     const data = await getMemories();
@@ -807,6 +810,7 @@ function App() {
     const list = await refreshMemories();
     const preferredMode = getStoredSessionStartMode(meData.user.username);
     setSessionStartMode(preferredMode);
+    setSessionStartModeDirty(false);
     applySessionStartPreference(meData.user.username, list, preferredMode);
     await refreshUsers(authToken, meData.user);
   });
@@ -870,6 +874,7 @@ function App() {
     setCurrentIndex(START_MONTH - 1);
     setTimelineYear(START_YEAR);
     setSessionStartMode("inicio");
+    setSessionStartModeDirty(false);
     setMessage("");
     setError("");
   }
@@ -877,11 +882,23 @@ function App() {
   function handleSessionStartModeChange(event) {
     const nextMode = event.target.value === "ultimo" ? "ultimo" : "inicio";
     setSessionStartMode(nextMode);
+    setSessionStartModeDirty(true);
+  }
 
-    if (user?.username) {
-      setStoredSessionStartMode(user.username, nextMode);
-      applySessionStartPreference(user.username, constellations, nextMode);
+  function saveSessionStartModePreference() {
+    if (!user?.username) {
+      return;
     }
+
+    setStoredSessionStartMode(user.username, sessionStartMode);
+    applySessionStartPreference(user.username, constellations, sessionStartMode);
+    setSessionStartModeDirty(false);
+    setMessage(
+      sessionStartMode === "ultimo"
+        ? "Inicio guardado: ahora abre en el ultimo recuerdo."
+        : "Inicio guardado: ahora abre desde el comienzo.",
+    );
+    setError("");
   }
 
   function exportCurrentMemories() {
@@ -1779,7 +1796,7 @@ function App() {
         <div className="header-actions">
           <p className="chip">{user.displayName}</p>
           <p className="chip role">Rol: {user.role}</p>
-          {user.role !== "viewer" && (
+          {!isViewerRole && (
             <label className="switch">
               <input
                 type="checkbox"
@@ -2052,6 +2069,14 @@ function App() {
                 <option value="ultimo">Ver último recuerdo</option>
               </select>
             </label>
+            <button
+              type="button"
+              className="ghost"
+              onClick={saveSessionStartModePreference}
+              disabled={!sessionStartModeDirty}
+            >
+              Guardar inicio
+            </button>
           </section>
 
           <section className="panel-block">
