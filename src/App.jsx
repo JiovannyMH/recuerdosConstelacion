@@ -29,6 +29,7 @@ const MAX_UPLOAD_VIDEO_BYTES = 8 * 1024 * 1024;
 const MAX_UPLOAD_IMAGE_INPUT_BYTES = 20 * 1024 * 1024;
 const TARGET_IMAGE_DATA_URL_BYTES = 950 * 1024;
 const MAX_IMAGE_DIMENSION = 1600;
+const PROJECT_MEMORIES_IMAGE_PREFIX = "/recuerdos/";
 const MONTH_NAMES = [
   "Enero",
   "Febrero",
@@ -65,6 +66,49 @@ function getEmbedUrl(url) {
   }
 
   return "";
+}
+
+function normalizeProjectImagePath(rawPath) {
+  const value = String(rawPath || "").trim();
+
+  if (!value) {
+    return "";
+  }
+
+  // Files in public/recuerdos are served from /recuerdos/... in Vite/Netlify.
+  if (value.startsWith(PROJECT_MEMORIES_IMAGE_PREFIX)) {
+    return value;
+  }
+
+  if (value.startsWith("recuerdos/")) {
+    return `/${value}`;
+  }
+
+  if (value.startsWith("./recuerdos/")) {
+    return `/${value.slice(2)}`;
+  }
+
+  if (value.startsWith("/public/recuerdos/")) {
+    return value.replace("/public", "");
+  }
+
+  if (value.startsWith("public/recuerdos/")) {
+    return `/${value.replace(/^public\//, "")}`;
+  }
+
+  return `${PROJECT_MEMORIES_IMAGE_PREFIX}${value.replace(/^\/+/, "")}`;
+}
+
+function isExternalMediaUrl(url) {
+  return /^https?:\/\//i.test(String(url || "").trim());
+}
+
+function isDataMediaUrl(url) {
+  return /^data:/i.test(String(url || "").trim());
+}
+
+function hasSupportedImageExtension(pathValue) {
+  return /\.(png|jpg|jpeg|webp|gif|svg)(\?.*)?$/i.test(String(pathValue || "").trim());
 }
 
 function readFileAsDataUrl(file) {
@@ -833,9 +877,32 @@ function App() {
 
     try {
       const constellationId = selectedConstellationIdForForm;
+      const normalizedImagePath = normalizeProjectImagePath(newMemory.url);
 
       if (!constellationId) {
         throw new Error("No hay una constelacion seleccionada");
+      }
+
+      if (newMemory.type === "image") {
+        if (!newMemory.url.trim()) {
+          throw new Error("Para imagen, indica una ruta del proyecto dentro de /recuerdos/");
+        }
+
+        if (isExternalMediaUrl(newMemory.url)) {
+          throw new Error("Las imagenes deben venir del proyecto. Usa /recuerdos/nombre-archivo.jpg");
+        }
+
+        if (isDataMediaUrl(newMemory.url)) {
+          throw new Error("No se permite data URL para imagenes. Usa archivos en public/recuerdos");
+        }
+
+        if (!normalizedImagePath.startsWith(PROJECT_MEMORIES_IMAGE_PREFIX)) {
+          throw new Error("La ruta de imagen debe iniciar en /recuerdos/");
+        }
+
+        if (!hasSupportedImageExtension(normalizedImagePath)) {
+          throw new Error("Formato de imagen no soportado. Usa png, jpg, jpeg, webp, gif o svg");
+        }
       }
 
       const isAssigningToExisting = Boolean(newMemory.targetMemoryId);
@@ -850,7 +917,7 @@ function App() {
                 type: newMemory.type,
                 title: newMemory.title,
                 description: newMemory.description,
-                url: newMemory.url,
+                url: newMemory.type === "image" ? normalizedImagePath : newMemory.url,
               },
             }
           : {
@@ -860,7 +927,7 @@ function App() {
                 type: newMemory.type,
                 title: newMemory.title,
                 description: newMemory.description,
-                url: newMemory.url,
+                url: newMemory.type === "image" ? normalizedImagePath : newMemory.url,
                 x: Number(newMemory.x),
                 y: Number(newMemory.y),
               },
@@ -894,6 +961,12 @@ function App() {
 
     if (!isImage && !isVideo) {
       setError("Solo puedes subir imagenes o videos");
+      setMemoryFileInputKey((prev) => prev + 1);
+      return;
+    }
+
+    if (isImage) {
+      setError("Para imagenes usa archivos del proyecto en public/recuerdos y escribe la ruta /recuerdos/archivo.jpg");
       setMemoryFileInputKey((prev) => prev + 1);
       return;
     }
@@ -1922,20 +1995,28 @@ function App() {
                     <input
                       key={memoryFileInputKey}
                       type="file"
-                      accept="image/*,video/*"
+                      accept="video/*"
                       onChange={handleMemoryFileChange}
                     />
                   </label>
                   <label>
-                    URL opcional (imagen/video)
+                    Ruta o URL
                     <input
-                      placeholder="https://..."
+                      placeholder={
+                        newMemory.type === "image" ? "/recuerdos/mi-foto.jpg" : "https://..."
+                      }
                       value={newMemory.url}
                       onChange={(event) =>
                         setNewMemory((prev) => ({ ...prev, url: event.target.value }))
                       }
                     />
                   </label>
+                  {newMemory.type === "image" && (
+                    <p className="memory-note">
+                      Guarda tus imagenes en <strong>public/recuerdos/</strong> y usa la ruta
+                      publica, por ejemplo <strong>/recuerdos/nuestro-viaje.jpg</strong>.
+                    </p>
+                  )}
                   {!newMemory.targetMemoryId && (
                     <div className="grid-2">
                       <label>

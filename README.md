@@ -49,6 +49,19 @@ Para imagen o video tienes dos opciones:
 - Subir un archivo local directamente desde el formulario.
 - Pegar una URL externa si ya tienes el archivo publicado.
 
+### Imagenes de recuerdos en GitHub
+
+Las imagenes de recuerdos ahora se sirven desde el propio proyecto para que queden versionadas en GitHub.
+
+- Guarda tus imagenes en `public/recuerdos/`.
+- Usa en la app la ruta publica, por ejemplo: `/recuerdos/nuestra-foto.jpg`.
+- No uses `data:image/...` ni enlaces externos para recuerdos de tipo imagen.
+
+Nota:
+
+- El campo de subida directa en el formulario queda reservado para videos.
+- Si agregas una imagen nueva al proyecto, haz commit y push para que Netlify la publique.
+
 Si subes archivo local, intenta que no pese demasiado. El proyecto limita la carga a 8 MB por recuerdo para evitar problemas con Netlify.
 
 ## Desarrollo local
