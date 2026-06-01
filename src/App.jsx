@@ -274,6 +274,24 @@ function canRenderImageMemory(memory) {
   return /^data:image\//i.test(url) || /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(url);
 }
 
+function hasRealImageMemory(memory) {
+  if (!canRenderImageMemory(memory)) {
+    return false;
+  }
+
+  const url = String(memory?.url || "").trim();
+  if (!url) {
+    return false;
+  }
+
+  // Safety guard in case a placeholder-like URL gets into persisted data.
+  if (url === DEMO_DROP_IMAGE) {
+    return false;
+  }
+
+  return true;
+}
+
 function normalizeTimelineConstellations(list) {
   const source = Array.isArray(list) ? list : [];
   const monthlyConstellations = source.filter(
@@ -534,6 +552,13 @@ function App() {
 
     if (timelineList.length === 0) {
       return 0;
+    }
+
+    for (let index = timelineList.length - 1; index >= 0; index -= 1) {
+      const items = Array.isArray(timelineList[index]?.items) ? timelineList[index].items : [];
+      if (items.some((item) => hasRealImageMemory(item))) {
+        return index;
+      }
     }
 
     for (let index = timelineList.length - 1; index >= 0; index -= 1) {
