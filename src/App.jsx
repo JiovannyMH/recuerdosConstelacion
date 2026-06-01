@@ -292,6 +292,67 @@ function hasRealImageMemory(memory) {
   return true;
 }
 
+function resolveStoryYearForMonth(monthValue) {
+  if (!Number.isFinite(monthValue)) {
+    return START_YEAR;
+  }
+
+  if (monthValue >= START_MONTH) {
+    return START_YEAR;
+  }
+
+  return START_YEAR + 1;
+}
+
+function isMediaMemory(memory) {
+  const type = String(memory?.type || "").trim().toLowerCase();
+  const url = String(memory?.url || "").trim();
+
+  if (type === "video") {
+    return Boolean(url);
+  }
+
+  return canRenderImageMemory(memory);
+}
+
+function isMemoryActiveForYear(memory, constellationMonth, timelineYearValue) {
+  if (!memory) {
+    return false;
+  }
+
+  if (!isMediaMemory(memory)) {
+    return true;
+  }
+
+  const explicitYear = Number(memory.year);
+  if (Number.isInteger(explicitYear)) {
+    return explicitYear === timelineYearValue;
+  }
+
+  return resolveStoryYearForMonth(Number(constellationMonth)) === timelineYearValue;
+}
+
+function getMemoryForTimeline(memory, constellationMonth, timelineYearValue) {
+  if (!memory) {
+    return memory;
+  }
+
+  if (isMemoryActiveForYear(memory, constellationMonth, timelineYearValue)) {
+    return memory;
+  }
+
+  if (!isMediaMemory(memory)) {
+    return memory;
+  }
+
+  return {
+    ...memory,
+    type: "text",
+    url: "",
+    description: "",
+  };
+}
+
 function normalizeTimelineConstellations(list) {
   const source = Array.isArray(list) ? list : [];
   const monthlyConstellations = source.filter(
@@ -552,6 +613,52 @@ function App() {
 
     if (timelineList.length === 0) {
       return 0;
+    }
+
+    const constellationByMonth = new Map();
+    timelineList.forEach((constellation, index) => {
+      const month = Number(constellation?.month);
+      if (Number.isInteger(month) && month >= 1 && month <= 12 && !constellationByMonth.has(month)) {
+        constellationByMonth.set(month, { constellation, index });
+      }
+    });
+
+    const storyMonthOrder = Array.from({ length: 12 }, (_, index) => ((START_MONTH - 1 + index) % 12) + 1);
+
+    let lastWithImageIndex = -1;
+    for (let orderIndex = 0; orderIndex < storyMonthOrder.length; orderIndex += 1) {
+      const month = storyMonthOrder[orderIndex];
+      const entry = constellationByMonth.get(month);
+      if (!entry) {
+        continue;
+      }
+
+      const items = Array.isArray(entry.constellation?.items) ? entry.constellation.items : [];
+      if (items.some((item) => hasRealImageMemory(item))) {
+        lastWithImageIndex = entry.index;
+      }
+    }
+
+    if (lastWithImageIndex >= 0) {
+      return lastWithImageIndex;
+    }
+
+    let lastWithItemsIndex = -1;
+    for (let orderIndex = 0; orderIndex < storyMonthOrder.length; orderIndex += 1) {
+      const month = storyMonthOrder[orderIndex];
+      const entry = constellationByMonth.get(month);
+      if (!entry) {
+        continue;
+      }
+
+      const items = Array.isArray(entry.constellation?.items) ? entry.constellation.items : [];
+      if (items.length > 0) {
+        lastWithItemsIndex = entry.index;
+      }
+    }
+
+    if (lastWithItemsIndex >= 0) {
+      return lastWithItemsIndex;
     }
 
     for (let index = timelineList.length - 1; index >= 0; index -= 1) {
@@ -1622,21 +1729,26 @@ function App() {
   const dropPreviewByItemId = useMemo(() => {
     const map = {};
     const items = currentConstellation?.items || [];
+    const constellationMonth = Number(currentConstellation?.month);
 
     items.forEach((item) => {
-      const hasImage = canRenderImageMemory(item);
-      map[item.id] = hasImage ? item.url.trim() : DEMO_DROP_IMAGE;
+      const visibleItem = getMemoryForTimeline(item, constellationMonth, timelineYear);
+      const hasImage = canRenderImageMemory(visibleItem);
+      map[item.id] = hasImage ? String(visibleItem.url || "").trim() : DEMO_DROP_IMAGE;
     });
 
     return map;
-  }, [currentConstellation]);
+  }, [currentConstellation, timelineYear]);
 
   const alwaysVisibleDropId = useMemo(() => {
     const items = currentConstellation?.items || [];
-    const firstWithImage = items.find((item) => canRenderImageMemory(item));
+    const constellationMonth = Number(currentConstellation?.month);
+    const firstWithImage = items.find((item) =>
+      canRenderImageMemory(getMemoryForTimeline(item, constellationMonth, timelineYear)),
+    );
 
     return firstWithImage?.id || items[0]?.id || "";
-  }, [currentConstellation]);
+  }, [currentConstellation, timelineYear]);
   const activeHoveredStarId =
     (currentConstellation?.items || []).some((item) => item.id === hoveredStarId) ? hoveredStarId : "";
 
@@ -1963,7 +2075,10 @@ function App() {
                 );
               })}
             </svg>
-            {(currentConstellation?.items || []).map((memory, index) => (
+            {(currentConstellation?.items || []).map((memory, index) => {
+              const visibleMemory = getMemoryForTimeline(memory, currentConstellation?.month, timelineYear);
+
+              return (
               <Fragment key={memory.id}>
                 {(memory.id === alwaysVisibleDropId || activeHoveredStarId === memory.id) && dropPreviewByItemId[memory.id] && (
                   <button
@@ -1980,14 +2095,14 @@ function App() {
                     onClick={() =>
                       openMemoryWithZoom(
                         {
-                          ...memory,
+                          ...visibleMemory,
                           x: displayItemById[memory.id]?.x ?? memory.x,
                           y: displayItemById[memory.id]?.y ?? memory.y,
                         },
                         currentConstellation.id,
                       )
                     }
-                    aria-label={`Abrir recuerdo ${memory.title}`}
+                    aria-label={`Abrir recuerdo ${visibleMemory.title}`}
                   >
                     <img src={dropPreviewByItemId[memory.id]} alt="" loading="lazy" />
                   </button>
@@ -1997,7 +2112,7 @@ function App() {
                   className={`star ${
                     highlightedStarId === memory.id || activeHoveredStarId === memory.id ? "is-highlighted" : ""
                   } ${
-                    hasOrbitingImage(memory) ? "has-orbiting-memory" : ""
+                    hasOrbitingImage(visibleMemory) ? "has-orbiting-memory" : ""
                   }`}
                   style={{
                     left: `${displayItemById[memory.id]?.x ?? memory.x}%`,
@@ -2012,21 +2127,21 @@ function App() {
                   onClick={() =>
                     openMemoryWithZoom(
                       {
-                        ...memory,
+                        ...visibleMemory,
                         x: displayItemById[memory.id]?.x ?? memory.x,
                         y: displayItemById[memory.id]?.y ?? memory.y,
                       },
                       currentConstellation.id,
                     )
                   }
-                  aria-label={`Abrir recuerdo ${memory.title}`}
-                  title={memory.title}
+                  aria-label={`Abrir recuerdo ${visibleMemory.title}`}
+                  title={visibleMemory.title}
                 >
                   <span className="star-core" aria-hidden="true" />
-                  {hasOrbitingImage(memory) && <span className="star-orbit" aria-hidden="true" />}
+                  {hasOrbitingImage(visibleMemory) && <span className="star-orbit" aria-hidden="true" />}
                 </button>
               </Fragment>
-            ))}
+            )})}
             {(currentConstellation?.items || []).length === 0 && (
               <p className="empty">No hay estrellas en esta constelación todavía.</p>
             )}
