@@ -243,7 +243,35 @@ function hasOrbitingImage(memory) {
   const type = String(memory.type || "").trim().toLowerCase();
   const url = String(memory.url || "").trim();
 
-  return type === "image" && Boolean(url);
+  if (!url) {
+    return false;
+  }
+
+  if (type === "image") {
+    return true;
+  }
+
+  // Compatibility for imported/synced data where type may not be normalized.
+  return /^data:image\//i.test(url) || /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(url);
+}
+
+function canRenderImageMemory(memory) {
+  if (!memory) {
+    return false;
+  }
+
+  const type = String(memory.type || "").trim().toLowerCase();
+  const url = String(memory.url || "").trim();
+
+  if (!url) {
+    return false;
+  }
+
+  if (type === "image") {
+    return true;
+  }
+
+  return /^data:image\//i.test(url) || /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(url);
 }
 
 function normalizeTimelineConstellations(list) {
@@ -1404,7 +1432,7 @@ function App() {
     const items = currentConstellation?.items || [];
 
     items.forEach((item) => {
-      const hasImage = item?.type === "image" && typeof item?.url === "string" && item.url.trim();
+      const hasImage = canRenderImageMemory(item);
       map[item.id] = hasImage ? item.url.trim() : DEMO_DROP_IMAGE;
     });
 
@@ -1413,9 +1441,7 @@ function App() {
 
   const alwaysVisibleDropId = useMemo(() => {
     const items = currentConstellation?.items || [];
-    const firstWithImage = items.find(
-      (item) => item?.type === "image" && typeof item?.url === "string" && item.url.trim(),
-    );
+    const firstWithImage = items.find((item) => canRenderImageMemory(item));
 
     return firstWithImage?.id || items[0]?.id || "";
   }, [currentConstellation]);
@@ -1439,7 +1465,7 @@ function App() {
         <h3>{selectedMemory.title}</h3>
         {selectedMemory.description && <p>{selectedMemory.description}</p>}
 
-        {selectedMemory.type === "image" && selectedMemory.url && (
+        {canRenderImageMemory(selectedMemory) && selectedMemory.url && (
           <>
             <div className="memory-image-tools">
               <button
