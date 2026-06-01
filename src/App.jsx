@@ -1411,7 +1411,14 @@ function App() {
     return map;
   }, [currentConstellation]);
 
-  const alwaysVisibleDropId = currentConstellation?.items?.[0]?.id || "";
+  const alwaysVisibleDropId = useMemo(() => {
+    const items = currentConstellation?.items || [];
+    const firstWithImage = items.find(
+      (item) => item?.type === "image" && typeof item?.url === "string" && item.url.trim(),
+    );
+
+    return firstWithImage?.id || items[0]?.id || "";
+  }, [currentConstellation]);
   const activeHoveredStarId =
     (currentConstellation?.items || []).some((item) => item.id === hoveredStarId) ? hoveredStarId : "";
 
