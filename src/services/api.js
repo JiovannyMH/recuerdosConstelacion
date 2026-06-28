@@ -12,6 +12,7 @@ const LOCAL_CONSTELLATIONS_KEY = "anniversary_local_constellations";
 const LOCAL_TOKEN_PREFIX = "local-anniversary-token.";
 const LOCAL_ALLOWED_ROLES = ["viewer", "editor", "admin"];
 const LOCAL_TOKEN_DURATION_MS = 12 * 60 * 60 * 1000;
+const MEMORY_STORAGE_FALLBACK = new Map();
 const FORCE_LOCAL_API =
   import.meta.env.VITE_FORCE_LOCAL_API === "true" ||
   (typeof window !== "undefined" && window.location.protocol === "file:");
@@ -58,6 +59,47 @@ function parseJsonText(text) {
   }
 }
 
+function isStorageQuotaExceeded(error) {
+  if (!error) {
+    return false;
+  }
+
+  return (
+    error.name === "QuotaExceededError" ||
+    error.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+    error.code === 22 ||
+    error.code === 1014
+  );
+}
+
+function getStorageItemSafely(key) {
+  if (MEMORY_STORAGE_FALLBACK.has(key)) {
+    return MEMORY_STORAGE_FALLBACK.get(key);
+  }
+
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function setStorageItemSafely(key, rawValue) {
+  try {
+    window.localStorage.setItem(key, rawValue);
+    MEMORY_STORAGE_FALLBACK.delete(key);
+    return;
+  } catch (error) {
+    if (isStorageQuotaExceeded(error)) {
+      // Continue working in-memory when browser quota is reached.
+      MEMORY_STORAGE_FALLBACK.set(key, rawValue);
+      return;
+    }
+
+    throw error;
+  }
+}
+
 function shouldUseLocalFallback(response, contentType) {
   if (FORCE_LOCAL_API) {
     return true;
@@ -100,10 +142,10 @@ async function request(path, options = {}, localHandler) {
 }
 
 function readStorage(key, fallbackValue) {
-  const stored = window.localStorage.getItem(key);
+  const stored = getStorageItemSafely(key);
   if (!stored) {
     const nextValue = clone(fallbackValue);
-    window.localStorage.setItem(key, JSON.stringify(nextValue));
+    setStorageItemSafely(key, JSON.stringify(nextValue));
     return nextValue;
   }
 
@@ -111,13 +153,13 @@ function readStorage(key, fallbackValue) {
     return JSON.parse(stored);
   } catch {
     const nextValue = clone(fallbackValue);
-    window.localStorage.setItem(key, JSON.stringify(nextValue));
+    setStorageItemSafely(key, JSON.stringify(nextValue));
     return nextValue;
   }
 }
 
 function writeStorage(key, value) {
-  window.localStorage.setItem(key, JSON.stringify(value));
+  setStorageItemSafely(key, JSON.stringify(value));
   return value;
 }
 
@@ -598,5 +640,19 @@ export async function updateUserRole(token, username, role) {
       body: JSON.stringify({ action: "updateRole", username, role }),
     },
     () => localUpdateUserRole(token, username, role),
+  );
+}
+
+export async function uploadMemoryImage(token, fileName, dataUrl) {
+  return request(
+    "/upload-image",
+    {
+      method: "POST",
+      headers: withAuth(token),
+      body: JSON.stringify({ fileName, dataUrl }),
+    },
+    () => {
+      throw new Error("La subida automatica a /recuerdos requiere ejecutar la app con API activa");
+    },
   );
 }

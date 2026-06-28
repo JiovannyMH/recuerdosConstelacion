@@ -1,10 +1,12 @@
 import { Fragment, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import "./App.css";
+import { isDefaultConstellationMemory } from "../shared/constellations.mjs";
 import {
   getMemories,
   getUsers,
   login,
   me,
+  uploadMemoryImage,
   updateMemories,
   updateUserRole,
 } from "./services/api";
@@ -54,6 +56,7 @@ const MONTH_NAMES = [
 
 const DEMO_DROP_IMAGE =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 220'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffd3e1'/%3E%3Cstop offset='1' stop-color='%2384c3ff'/%3E%3C/linearGradient%3E%3CradialGradient id='shine' cx='0.32' cy='0.25' r='0.7'%3E%3Cstop offset='0' stop-color='%23fff9ff' stop-opacity='0.92'/%3E%3Cstop offset='1' stop-color='%23fff9ff' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='180' height='220' fill='url(%23bg)'/%3E%3Ccircle cx='128' cy='58' r='38' fill='url(%23shine)'/%3E%3Cpath d='M32 168c14-36 40-58 58-58s44 22 58 58' fill='none' stroke='%23ffffff' stroke-opacity='0.62' stroke-width='11' stroke-linecap='round'/%3E%3Ccircle cx='70' cy='86' r='7' fill='%23ffffff' fill-opacity='0.95'/%3E%3Ccircle cx='112' cy='102' r='6' fill='%23ffffff' fill-opacity='0.88'/%3E%3Ccircle cx='90' cy='130' r='5' fill='%23ffffff' fill-opacity='0.84'/%3E%3C/svg%3E";
+const DEFAULT_DROP_IMAGE_NAME_HINTS = ["gota", "drop", "demo-drop", "default-drop", "placeholder-drop"];
 
 function getEmbedUrl(url) {
   if (!url) {
@@ -116,6 +119,39 @@ function isDataMediaUrl(url) {
 
 function hasSupportedImageExtension(pathValue) {
   return /\.(png|jpg|jpeg|webp|gif|svg)(\?.*)?$/i.test(String(pathValue || "").trim());
+}
+
+function getImageFileName(urlValue) {
+  const value = String(urlValue || "").trim();
+  if (!value) {
+    return "";
+  }
+
+  if (isDataMediaUrl(value)) {
+    return "";
+  }
+
+  const withoutQuery = value.split("?")[0] || "";
+  const segments = withoutQuery.split("/").filter(Boolean);
+  return (segments[segments.length - 1] || "").toLowerCase();
+}
+
+function isDefaultDropImageUrl(urlValue) {
+  const value = String(urlValue || "").trim();
+  if (!value) {
+    return false;
+  }
+
+  if (value === DEMO_DROP_IMAGE) {
+    return true;
+  }
+
+  const fileName = getImageFileName(value);
+  if (!fileName) {
+    return false;
+  }
+
+  return DEFAULT_DROP_IMAGE_NAME_HINTS.some((hint) => fileName.includes(hint));
 }
 
 function readFileAsDataUrl(file) {
@@ -254,6 +290,10 @@ function hasOrbitingImage(memory) {
     return false;
   }
 
+  if (isDefaultDropImageUrl(url)) {
+    return false;
+  }
+
   if (type === "image") {
     return true;
   }
@@ -292,7 +332,7 @@ function hasRealImageMemory(memory) {
   }
 
   // Safety guard in case a placeholder-like URL gets into persisted data.
-  if (url === DEMO_DROP_IMAGE) {
+  if (isDefaultDropImageUrl(url)) {
     return false;
   }
 
@@ -1273,22 +1313,57 @@ function App() {
     }
 
     try {
-      const fileUrl = isImage ? await compressImageAsDataUrl(file) : await readFileAsDataUrl(file);
-      const estimatedKb = Math.max(1, Math.round(dataUrlSizeInBytes(fileUrl) / 1024));
+      if (isImage) {
+        const imageDataUrl = await compressImageAsDataUrl(file);
+        const uploadResponse = await uploadMemoryImage(token, file.name, imageDataUrl);
+        const publicUrl = normalizeProjectImagePath(uploadResponse?.publicUrl || "");
 
+        if (!publicUrl) {
+          throw new Error("No se pudo obtener la ruta publica para la imagen");
+        }
+
+        setNewMemory((prev) => ({
+          ...prev,
+          type: "image",
+          url: publicUrl,
+        }));
+        setError("");
+        setMessage(`Imagen guardada automaticamente en ${publicUrl}`);
+        return;
+      }
+
+      const videoUrl = await readFileAsDataUrl(file);
       setNewMemory((prev) => ({
         ...prev,
-        type: isImage ? "image" : "video",
-        url: fileUrl,
+        type: "video",
+        url: videoUrl,
       }));
       setError("");
-      setMessage(
-        isImage
-          ? `Imagen optimizada lista: ${file.name} (~${estimatedKb} KB)`
-          : `Archivo listo: ${file.name}`,
-      );
+      setMessage(`Archivo listo: ${file.name}`);
     } catch (fileError) {
-      setError(fileError.message);
+      if (isImage) {
+        try {
+          const fallbackDataUrl = await compressImageAsDataUrl(file);
+          const estimatedKb = Math.max(1, Math.round(dataUrlSizeInBytes(fallbackDataUrl) / 1024));
+
+          setNewMemory((prev) => ({
+            ...prev,
+            type: "image",
+            url: fallbackDataUrl,
+          }));
+
+          setError(
+            `${fileError.message}. Se uso respaldo temporal en memoria local; para guardar en /recuerdos ejecuta la app con API activa.`,
+          );
+          setMessage(`Imagen optimizada en respaldo temporal: ${file.name} (~${estimatedKb} KB)`);
+          return;
+        } catch {
+          setError(fileError.message);
+        }
+      } else {
+        setError(fileError.message);
+      }
+
       setMemoryFileInputKey((prev) => prev + 1);
     }
   }
@@ -1830,6 +1905,19 @@ function App() {
     return map;
   }, [currentConstellation, timelineYear]);
 
+  const hasRealImageByItemId = useMemo(() => {
+    const map = {};
+    const items = currentConstellation?.items || [];
+    const constellationMonth = Number(currentConstellation?.month);
+
+    items.forEach((item) => {
+      const visibleItem = getMemoryForTimeline(item, constellationMonth, timelineYear);
+      map[item.id] = hasRealImageMemory(visibleItem);
+    });
+
+    return map;
+  }, [currentConstellation, timelineYear]);
+
   const alwaysVisibleDropId = useMemo(() => {
     const items = currentConstellation?.items || [];
     const constellationMonth = Number(currentConstellation?.month);
@@ -2167,10 +2255,13 @@ function App() {
             </svg>
             {(currentConstellation?.items || []).map((memory, index) => {
               const visibleMemory = getMemoryForTimeline(memory, currentConstellation?.month, timelineYear);
+              const isOriginalConstellationStar = isDefaultConstellationMemory(currentConstellation?.id, memory.id);
 
               return (
               <Fragment key={memory.id}>
-                {(memory.id === alwaysVisibleDropId || activeHoveredStarId === memory.id) && dropPreviewByItemId[memory.id] && (
+                {isOriginalConstellationStar &&
+                  (hasRealImageByItemId[memory.id] || memory.id === alwaysVisibleDropId || activeHoveredStarId === memory.id) &&
+                  dropPreviewByItemId[memory.id] && (
                   <button
                     type="button"
                     className="memory-drop-preview"
