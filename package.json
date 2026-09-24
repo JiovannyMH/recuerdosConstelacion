@@ -15,6 +15,7 @@
     "sync:recuerdos": "node scripts/sync-recuerdos-proyecto.mjs"
   },
   "dependencies": {
+    "@google-cloud/storage": "^8.2.0",
     "@netlify/blobs": "^10.7.8",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"

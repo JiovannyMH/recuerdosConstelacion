@@ -17,7 +17,7 @@ const DEFAULT_USERS = [
     username: "Ibeth",
     password: "IbeJio2026",
     displayName: "Ibeth",
-    role: ROLE_VIEWER,
+    role: ROLE_EDITOR,
   },
 ];
 

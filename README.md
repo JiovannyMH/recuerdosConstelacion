@@ -33,7 +33,7 @@ APP_USERS_JSON=[{"username":"tu_usuario","password":"tu_clave","displayName":"Tu
 Roles disponibles:
 
 - admin: puede ver, crear constelaciones, agregar recuerdos y cambiar permisos.
-- editor: puede ver, crear constelaciones y agregar recuerdos.
+- editor: puede ver, crear constelaciones, agregar recuerdos y editar o eliminar recuerdos.
 - viewer: solo puede mirar.
 
 ## Recuerdos multimedia
@@ -49,18 +49,27 @@ Para imagen o video tienes dos opciones:
 - Subir un archivo local directamente desde el formulario.
 - Pegar una URL externa si ya tienes el archivo publicado.
 
-### Imagenes de recuerdos en GitHub
+### Almacenamiento multimedia en Google Cloud Storage
 
-Las imagenes de recuerdos ahora se sirven desde el propio proyecto para que queden versionadas en GitHub.
+Las imagenes y videos nuevos se suben directamente a un bucket privado de Google Cloud Storage mediante URLs firmadas generadas por Netlify Functions.
 
-- Guarda tus imagenes en `public/recuerdos/`.
-- Usa en la app la ruta publica, por ejemplo: `/recuerdos/nuestra-foto.jpg`.
-- No uses `data:image/...` ni enlaces externos para recuerdos de tipo imagen.
+Configura estas variables privadas en Netlify:
+
+```env
+GCS_PROJECT_ID=constelacion-509616
+GCS_BUCKET_NAME=contelacionesji
+GCS_CLIENT_EMAIL=admin-netlify-jio@constelacion-509616.iam.gserviceaccount.com
+GCS_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n
+```
+
+Tambien puedes usar una sola variable `GCS_SERVICE_ACCOUNT_JSON` con el contenido completo de la credencial JSON. Nunca expongas estas variables con prefijo `VITE_` ni las guardes en Git.
+
+La cuenta de servicio debe tener `Storage Object Admin` unicamente sobre el bucket privado. La app usa las rutas logicas `memories/images/` y `memories/videos/`; no es necesario crear carpetas manualmente.
 
 Nota:
 
-- El campo de subida directa en el formulario queda reservado para videos.
-- Si agregas una imagen nueva al proyecto, haz commit y push para que Netlify la publique.
+- Los recuerdos antiguos con rutas `/recuerdos/...`, URLs externas o datos embebidos siguen siendo compatibles.
+- Los recuerdos nuevos guardan un `objectKey`, no una URL firmada permanente.
 
 ### Importar imagenes desde Descargas
 
@@ -161,10 +170,12 @@ Netlify detecta automaticamente:
 - En produccion, los recuerdos y cambios de roles se guardan en Netlify Blobs.
 - En desarrollo sin Netlify Blobs, la app usa almacenamiento temporal en memoria para que puedas probar el flujo.
 
-## Limitaciones actuales
+## Limites multimedia
 
 - La creacion de usuarios nuevos no se hace desde la interfaz. Si quieres agregar otro usuario, debes editar APP_USERS_JSON y volver a desplegar.
-- Los videos muy pesados no son buena opcion para guardarlos embebidos como data URL.
+- Imagenes: hasta 20 MB por defecto.
+- Videos: hasta 250 MB por defecto.
+- Puedes cambiar los limites con `GCS_MAX_IMAGE_BYTES` y `GCS_MAX_VIDEO_BYTES`.
 
 ## Scripts
 

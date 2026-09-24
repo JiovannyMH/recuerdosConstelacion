@@ -20,7 +20,7 @@ const FORCE_LOCAL_API =
 const DEFAULT_USERS = [
   {
     username: "Jiovanny",
-    password: "M3g@JMdev",
+    password: "JMdev2020",
     displayName: "Tu",
     role: "admin",
   },
@@ -28,7 +28,7 @@ const DEFAULT_USERS = [
     username: "Ibeth",
     password: "IbeJio2026",
     displayName: "Ibeth",
-    role: "viewer",
+    role: "editor",
   },
 ];
 
@@ -307,6 +307,7 @@ function normalizeMemory(memoryInput) {
     title: String(memoryInput.title || "Sin titulo"),
     description: String(memoryInput.description || ""),
     url: memoryInput.url ? String(memoryInput.url) : "",
+    objectKey: memoryInput.objectKey ? String(memoryInput.objectKey) : "",
     x: Number.isFinite(Number(memoryInput.x)) ? Number(memoryInput.x) : 50,
     y: Number.isFinite(Number(memoryInput.y)) ? Number(memoryInput.y) : 50,
   };
@@ -655,4 +656,36 @@ export async function uploadMemoryImage(token, fileName, dataUrl) {
       throw new Error("La subida automatica a /recuerdos requiere ejecutar la app con API activa");
     },
   );
+}
+
+export async function uploadMemoryFile(token, file) {
+  const uploadData = await request(
+    "/media",
+    {
+      method: "POST",
+      headers: withAuth(token),
+      body: JSON.stringify({
+        fileName: file.name,
+        contentType: file.type,
+        sizeBytes: file.size,
+      }),
+    },
+    () => {
+      throw new Error("La subida multimedia requiere la API de Netlify activa");
+    },
+  );
+
+  const uploadResponse = await fetch(uploadData.uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": file.type,
+    },
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error("Google Cloud Storage rechazo el archivo");
+  }
+
+  return uploadData;
 }

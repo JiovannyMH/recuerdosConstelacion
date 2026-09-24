@@ -14,6 +14,7 @@ import {
 } from "./_lib/store.mjs";
 import { applyRoleOverrides, getConfiguredUsers } from "./_lib/auth.mjs";
 import { isDefaultConstellationMemory } from "../../shared/constellations.mjs";
+import { createReadUrl, deleteObject, isAllowedObjectKey } from "./_lib/gcs.mjs";
 
 function currentUserFromPayload(payload, roleOverrides) {
   const users = applyRoleOverrides(getConfiguredUsers(), roleOverrides);
@@ -29,9 +30,36 @@ function normalizeMemory(memoryInput) {
     title: String(memoryInput.title || "Sin titulo"),
     description: String(memoryInput.description || ""),
     url: memoryInput.url ? String(memoryInput.url) : "",
+    objectKey:
+      memoryInput.objectKey && isAllowedObjectKey(String(memoryInput.objectKey))
+        ? String(memoryInput.objectKey)
+        : "",
     x: Number.isFinite(Number(memoryInput.x)) ? Number(memoryInput.x) : 50,
     y: Number.isFinite(Number(memoryInput.y)) ? Number(memoryInput.y) : 50,
   };
+}
+
+async function addSignedMediaUrls(data) {
+  const constellations = Array.isArray(data?.constellations) ? data.constellations : [];
+  const hydratedConstellations = await Promise.all(
+    constellations.map(async (constellation) => ({
+      ...constellation,
+      items: await Promise.all(
+        (constellation.items || []).map(async (memory) => {
+          if (!memory.objectKey || !isAllowedObjectKey(memory.objectKey)) {
+            return memory;
+          }
+
+          return {
+            ...memory,
+            url: await createReadUrl(memory.objectKey),
+          };
+        }),
+      ),
+    })),
+  );
+
+  return { ...data, constellations: hydratedConstellations };
 }
 
 function clampToSkyBounds(value) {
@@ -118,8 +146,18 @@ export async function handler(event) {
   }
 
   if (event.httpMethod === "GET") {
+    const payload = verifyToken(getTokenFromEvent(event));
+    if (!payload) {
+      return jsonResponse(401, { message: "Sesion invalida" });
+    }
+
+    const roleOverrides = await getRoleOverrides();
+    if (!currentUserFromPayload(payload, roleOverrides)) {
+      return jsonResponse(401, { message: "Usuario no encontrado" });
+    }
+
     const data = await getConstellationsData();
-    return jsonResponse(200, data);
+    return jsonResponse(200, await addSignedMediaUrls(data));
   }
 
   if (event.httpMethod !== "POST") {
@@ -152,7 +190,7 @@ export async function handler(event) {
     };
 
     await saveConstellationsData(nextState);
-    return jsonResponse(200, nextState);
+    return jsonResponse(200, await addSignedMediaUrls(nextState));
   }
 
   if (action === "addMemory") {
@@ -174,7 +212,7 @@ export async function handler(event) {
     };
 
     await saveConstellationsData(nextState);
-    return jsonResponse(200, nextState);
+    return jsonResponse(200, await addSignedMediaUrls(nextState));
   }
 
   if (action === "updateMemory") {
@@ -202,7 +240,7 @@ export async function handler(event) {
     };
 
     await saveConstellationsData(nextState);
-    return jsonResponse(200, nextState);
+    return jsonResponse(200, await addSignedMediaUrls(nextState));
   }
 
   if (action === "deleteMemory") {
@@ -211,6 +249,14 @@ export async function handler(event) {
 
     if (isDefaultConstellationMemory(constellationId, memoryId)) {
       return jsonResponse(400, { message: "No se pueden borrar estrellas base de la constelacion" });
+    }
+
+    const memoryToDelete = currentConstellations
+      .find((constellation) => constellation.id === constellationId)
+      ?.items?.find((memory) => memory.id === memoryId);
+
+    if (memoryToDelete?.objectKey) {
+      await deleteObject(memoryToDelete.objectKey);
     }
 
     const nextState = {
@@ -227,7 +273,7 @@ export async function handler(event) {
     };
 
     await saveConstellationsData(nextState);
-    return jsonResponse(200, nextState);
+    return jsonResponse(200, await addSignedMediaUrls(nextState));
   }
 
   return jsonResponse(400, { message: "Accion no soportada" });

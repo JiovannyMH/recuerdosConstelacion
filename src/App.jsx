@@ -6,6 +6,7 @@ import {
   getUsers,
   login,
   me,
+  uploadMemoryFile,
   uploadMemoryImage,
   updateMemories,
   updateUserRole,
@@ -27,7 +28,7 @@ const SKIP_MONTHS_END_MONTH = 1;
 const MODAL_IMAGE_ZOOM_DEFAULT = 2.1;
 const MODAL_IMAGE_ZOOM_MIN = 1;
 const MODAL_IMAGE_ZOOM_MAX = 4;
-const MAX_UPLOAD_VIDEO_BYTES = 8 * 1024 * 1024;
+const MAX_UPLOAD_VIDEO_BYTES = 250 * 1024 * 1024;
 const MAX_UPLOAD_IMAGE_INPUT_BYTES = 20 * 1024 * 1024;
 const TARGET_IMAGE_DATA_URL_BYTES = 950 * 1024;
 const MAX_IMAGE_DIMENSION = 1600;
@@ -590,6 +591,7 @@ function App() {
     title: "",
     description: "",
     url: "",
+    objectKey: "",
     x: 50,
     y: 50,
   });
@@ -1201,11 +1203,14 @@ function App() {
       }
 
       if (newMemory.type === "image") {
-        if (!newMemory.url.trim()) {
+        if (!newMemory.url.trim() && !newMemory.objectKey) {
           throw new Error("Para imagen, sube un archivo o indica una ruta /recuerdos/...");
         }
 
         const imageUrl = String(newMemory.url || "").trim();
+        if (newMemory.objectKey) {
+          // Uploaded media is represented by its private bucket object key.
+        } else {
         const isDataImageUrl = /^data:image\//i.test(imageUrl);
         const isProjectImagePath = imageUrl.startsWith(PROJECT_MEMORIES_IMAGE_PREFIX);
         const isRelativeProjectImagePath =
@@ -1228,6 +1233,7 @@ function App() {
         } else {
           throw new Error("Usa una imagen subida desde archivo, una ruta /recuerdos/... o una URL valida");
         }
+        }
       }
 
       if (!IS_LOCAL_APP && newMemory.targetMemoryId) {
@@ -1246,6 +1252,7 @@ function App() {
                 type: newMemory.type,
                 title: newMemory.title,
                 description: newMemory.description,
+                objectKey: newMemory.objectKey,
                 url:
                   newMemory.type === "image" && !/^data:image\//i.test(String(newMemory.url || "").trim())
                     ? normalizeProjectImagePath(newMemory.url)
@@ -1259,6 +1266,7 @@ function App() {
                 type: newMemory.type,
                 title: newMemory.title,
                 description: newMemory.description,
+                objectKey: newMemory.objectKey,
                 url:
                   newMemory.type === "image" && !/^data:image\//i.test(String(newMemory.url || "").trim())
                     ? normalizeProjectImagePath(newMemory.url)
@@ -1277,6 +1285,7 @@ function App() {
         title: "",
         description: "",
         url: "",
+        objectKey: "",
       }));
       setMemoryFileInputKey((prev) => prev + 1);
     } catch (requestError) {
@@ -1313,6 +1322,20 @@ function App() {
     }
 
     try {
+      if (!IS_LOCAL_APP) {
+        const uploadResponse = await uploadMemoryFile(token, file);
+
+        setNewMemory((prev) => ({
+          ...prev,
+          type: uploadResponse.mediaType,
+          objectKey: uploadResponse.objectKey,
+          url: "",
+        }));
+        setError("");
+        setMessage(`Archivo subido: ${file.name}`);
+        return;
+      }
+
       if (isImage) {
         const imageDataUrl = await compressImageAsDataUrl(file);
         const uploadResponse = await uploadMemoryImage(token, file.name, imageDataUrl);
@@ -2564,7 +2587,12 @@ function App() {
                     <select
                       value={newMemory.type}
                       onChange={(event) =>
-                        setNewMemory((prev) => ({ ...prev, type: event.target.value }))
+                        setNewMemory((prev) => ({
+                          ...prev,
+                          type: event.target.value,
+                          objectKey: "",
+                          url: "",
+                        }))
                       }
                     >
                       <option value="image">Imagen</option>
