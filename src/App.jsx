@@ -1269,7 +1269,22 @@ function App() {
             },
       );
 
-      setConstellations(data.constellations || []);
+      const updatedConstellations = data.constellations || [];
+      setConstellations(updatedConstellations);
+      setSelectedMemory((prev) => {
+        if (!prev || prev.id !== newMemory.targetMemoryId || prev.constellationId !== constellationId) {
+          return prev;
+        }
+
+        const updatedConstellation = updatedConstellations.find(
+          (constellation) => constellation.id === constellationId,
+        );
+        const updatedMemory = updatedConstellation?.items?.find(
+          (memory) => memory.id === newMemory.targetMemoryId,
+        );
+
+        return updatedMemory ? { ...updatedMemory, constellationId } : prev;
+      });
       setMessage(isAssigningToExisting ? "Estrella actualizada." : "Recuerdo agregado.");
       setNewMemory((prev) => ({
         ...prev,
@@ -1396,6 +1411,7 @@ function App() {
           type: "text",
           description: "",
           url: "",
+          objectKey: "",
         },
       });
 
@@ -2536,7 +2552,14 @@ function App() {
                               type="button"
                               className={`star-picker-option ${newMemory.targetMemoryId ? "" : "is-selected"}`}
                               onClick={() => {
-                                setNewMemory((prev) => ({ ...prev, targetMemoryId: "" }));
+                                setNewMemory((prev) => ({
+                                  ...prev,
+                                  targetMemoryId: "",
+                                  title: "",
+                                  description: "",
+                                  url: "",
+                                  objectKey: "",
+                                }));
                                 setHoveredStarId("");
                                 setIsStarPickerOpen(false);
                               }}
@@ -2556,7 +2579,15 @@ function App() {
                                 onFocus={() => setHoveredStarId(memory.id)}
                                 onBlur={() => setHoveredStarId("")}
                                 onClick={() => {
-                                  setNewMemory((prev) => ({ ...prev, targetMemoryId: memory.id }));
+                                  setNewMemory((prev) => ({
+                                    ...prev,
+                                    targetMemoryId: memory.id,
+                                    type: memory.type || "text",
+                                    title: memory.title || "",
+                                    description: memory.description || "",
+                                    url: memory.url || "",
+                                    objectKey: memory.objectKey || "",
+                                  }));
                                   setHoveredStarId(memory.id);
                                   setIsStarPickerOpen(false);
                                 }}

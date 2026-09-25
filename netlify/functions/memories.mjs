@@ -219,6 +219,15 @@ export async function handler(event) {
     const constellationId = String(body.constellationId || "");
     const memoryId = String(body.memoryId || "");
     const updates = body.updates || {};
+    const currentMemory = currentConstellations
+      .find((constellation) => constellation.id === constellationId)
+      ?.items?.find((memory) => memory.id === memoryId);
+    const nextObjectKey =
+      updates.objectKey !== undefined ? String(updates.objectKey || "") : currentMemory?.objectKey || "";
+
+    if (currentMemory?.objectKey && currentMemory.objectKey !== nextObjectKey) {
+      await deleteObject(currentMemory.objectKey);
+    }
 
     const nextState = {
       constellations: currentConstellations.map((constellation) => {
