@@ -651,7 +651,7 @@ function App() {
   const firstContactLabel = `${START_DAY} de ${MONTH_NAMES[START_MONTH - 1].toLowerCase()} de ${START_YEAR}`;
   const flowersLabel = `${FLOWERS_DAY} de ${MONTH_NAMES[FLOWERS_MONTH - 1].toLowerCase()} de ${FLOWERS_YEAR}`;
 
-  const selectedConstellationIdForForm = currentConstellation?.id || newMemory.constellationId;
+  const selectedConstellationIdForForm = newMemory.constellationId || currentConstellation?.id || "";
 
   const selectedConstellationForForm = useMemo(
     () => constellations.find((constellation) => constellation.id === selectedConstellationIdForForm) || null,
@@ -2538,7 +2538,17 @@ function App() {
                     Constelación
                     <select
                       value={selectedConstellationIdForForm}
-                      disabled
+                      onChange={(event) =>
+                        setNewMemory((prev) => ({
+                          ...prev,
+                          constellationId: event.target.value,
+                          targetMemoryId: "",
+                          title: "",
+                          description: "",
+                          url: "",
+                          objectKey: "",
+                        }))
+                      }
                       required
                     >
                       <option value="" disabled>

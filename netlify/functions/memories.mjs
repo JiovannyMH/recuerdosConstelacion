@@ -46,6 +46,26 @@ function normalizeMemory(memoryInput) {
   };
 }
 
+function validateMemoryInput(memoryInput) {
+  const normalized = normalizeMemory(memoryInput || {});
+  const title = normalized.title.trim();
+  const url = normalized.url.trim();
+
+  if (!title || title === "Sin titulo") {
+    throw new Error("El recuerdo necesita un titulo");
+  }
+
+  if (["image", "video"].includes(normalized.type) && !normalized.objectKey && !url) {
+    throw new Error("El recuerdo multimedia necesita un archivo o una URL");
+  }
+
+  if (memoryInput?.objectKey && !normalized.objectKey) {
+    throw new Error("La referencia multimedia no es valida");
+  }
+
+  return normalized;
+}
+
 async function addSignedMediaUrls(data) {
   const constellations = Array.isArray(data?.constellations) ? data.constellations : [];
   const hydratedConstellations = await Promise.all(
@@ -202,6 +222,7 @@ export async function handler(event) {
 
   if (action === "addMemory") {
     const constellationId = String(body.constellationId || "");
+    const memoryInput = body.memory || {};
     const currentConstellation = currentConstellations.find(
       (constellation) => constellation.id === constellationId,
     );
@@ -210,13 +231,19 @@ export async function handler(event) {
       return jsonResponse(404, { message: "No se encontro la constelacion seleccionada" });
     }
 
+    try {
+      validateMemoryInput(memoryInput);
+    } catch (error) {
+      return jsonResponse(400, { message: error.message });
+    }
+
     const nextState = {
       constellations: currentConstellations.map((constellation) => {
         if (constellation.id !== constellationId) {
           return constellation;
         }
 
-        const resolvedMemory = resolveMemoryPosition(constellation.items || [], body.memory || {});
+        const resolvedMemory = resolveMemoryPosition(constellation.items || [], memoryInput);
 
         return {
           ...constellation,
@@ -243,6 +270,13 @@ export async function handler(event) {
       return jsonResponse(404, { message: "No se encontro la estrella que intentas actualizar" });
     }
 
+    let normalizedUpdates;
+    try {
+      normalizedUpdates = validateMemoryInput({ ...currentMemory, ...updates, id: memoryId });
+    } catch (error) {
+      return jsonResponse(400, { message: error.message });
+    }
+
     const nextObjectKey =
       updates.objectKey !== undefined ? String(updates.objectKey || "") : currentMemory?.objectKey || "";
 
@@ -263,7 +297,7 @@ export async function handler(event) {
               return memory;
             }
 
-            return normalizeMemory({ ...memory, ...updates, id: memory.id });
+            return normalizedUpdates;
           }),
         };
       }),

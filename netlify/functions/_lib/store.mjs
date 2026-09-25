@@ -58,6 +58,9 @@ async function readKey(key, fallbackValue) {
       }
     } catch (error) {
       console.error(`No se pudo leer Netlify Blobs (${key}):`, error);
+      if (IS_NETLIFY_RUNTIME) {
+        throw error;
+      }
     }
   }
 
@@ -84,6 +87,9 @@ async function writeKey(key, value) {
       return value;
     } catch (error) {
       console.error(`No se pudo guardar Netlify Blobs (${key}):`, error);
+      if (IS_NETLIFY_RUNTIME) {
+        throw error;
+      }
     }
   }
 
