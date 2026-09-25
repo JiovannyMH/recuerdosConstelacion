@@ -34,12 +34,8 @@ const TARGET_IMAGE_DATA_URL_BYTES = 950 * 1024;
 const MAX_IMAGE_DIMENSION = 1600;
 const PROJECT_MEMORIES_IMAGE_PREFIX = "/recuerdos/";
 const IS_LOCAL_APP =
-  import.meta.env.DEV ||
   import.meta.env.VITE_FORCE_LOCAL_API === "true" ||
-  (typeof window !== "undefined" &&
-    (window.location.protocol === "file:" ||
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1"));
+  (typeof window !== "undefined" && window.location.protocol === "file:");
 const MONTH_NAMES = [
   "Enero",
   "Febrero",
