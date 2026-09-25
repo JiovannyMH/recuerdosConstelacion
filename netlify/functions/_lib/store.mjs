@@ -11,12 +11,8 @@ function clone(data) {
 }
 
 async function getBlobStore() {
-  try {
-    const { getStore } = await import("@netlify/blobs");
-    return getStore("anniversary-memory-app");
-  } catch {
-    return null;
-  }
+  const { getStore } = await import("@netlify/blobs");
+  return getStore("anniversary-memory-app");
 }
 
 function getRuntimeStore() {
@@ -30,11 +26,9 @@ function getRuntimeStore() {
 async function readKey(key, fallbackValue) {
   const blobStore = await getBlobStore();
 
-  if (blobStore) {
-    const blobValue = await blobStore.get(key, { type: "json" });
-    if (blobValue) {
-      return blobValue;
-    }
+  const blobValue = await blobStore.get(key, { type: "json" });
+  if (blobValue) {
+    return blobValue;
   }
 
   const runtimeStore = getRuntimeStore();
@@ -48,13 +42,7 @@ async function readKey(key, fallbackValue) {
 async function writeKey(key, value) {
   const blobStore = await getBlobStore();
 
-  if (blobStore) {
-    await blobStore.setJSON(key, value);
-    return value;
-  }
-
-  const runtimeStore = getRuntimeStore();
-  runtimeStore[key] = clone(value);
+  await blobStore.setJSON(key, value);
 
   return value;
 }

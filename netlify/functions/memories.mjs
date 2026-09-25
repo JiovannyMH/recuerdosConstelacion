@@ -202,6 +202,13 @@ export async function handler(event) {
 
   if (action === "addMemory") {
     const constellationId = String(body.constellationId || "");
+    const currentConstellation = currentConstellations.find(
+      (constellation) => constellation.id === constellationId,
+    );
+
+    if (!currentConstellation) {
+      return jsonResponse(404, { message: "No se encontro la constelacion seleccionada" });
+    }
 
     const nextState = {
       constellations: currentConstellations.map((constellation) => {
@@ -219,7 +226,8 @@ export async function handler(event) {
     };
 
     await saveConstellationsData(nextState);
-    return jsonResponse(200, await addSignedMediaUrls(nextState));
+    const persistedState = await getConstellationsData();
+    return jsonResponse(200, await addSignedMediaUrls(persistedState));
   }
 
   if (action === "updateMemory") {
