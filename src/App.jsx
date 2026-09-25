@@ -1232,11 +1232,7 @@ function App() {
         }
       }
 
-      if (!IS_LOCAL_APP && newMemory.targetMemoryId) {
-        throw new Error("En la web desplegada no se permite editar estrellas existentes");
-      }
-
-      const isAssigningToExisting = IS_LOCAL_APP && Boolean(newMemory.targetMemoryId);
+      const isAssigningToExisting = Boolean(newMemory.targetMemoryId);
       const data = await updateMemories(
         token,
         isAssigningToExisting
@@ -2520,8 +2516,7 @@ function App() {
                   </label>
                   <label>
                     Estrella de la constelación (opcional)
-                    {IS_LOCAL_APP ? (
-                      <div className="star-picker" ref={starPickerRef}>
+                    <div className="star-picker" ref={starPickerRef}>
                         <button
                           type="button"
                           className="star-picker-trigger"
@@ -2571,12 +2566,7 @@ function App() {
                             ))}
                           </div>
                         )}
-                      </div>
-                    ) : (
-                      <p className="memory-note">
-                        En la web publicada no se permite editar estrellas existentes para mantener la sincronía.
-                      </p>
-                    )}
+                    </div>
                   </label>
                   <label>
                     Tipo
@@ -2671,7 +2661,7 @@ function App() {
                     </div>
                   )}
                   <button type="submit">
-                    {IS_LOCAL_APP && newMemory.targetMemoryId ? "Asignar a estrella" : "Guardar recuerdo"}
+                    {newMemory.targetMemoryId ? "Actualizar estrella" : "Guardar recuerdo"}
                   </button>
                 </form>
               </section>
