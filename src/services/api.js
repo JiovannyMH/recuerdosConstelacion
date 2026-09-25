@@ -128,7 +128,7 @@ async function request(path, options = {}, localHandler) {
         return localHandler();
       }
 
-      throw new Error(body.message || "Error de red");
+      throw new Error(body.message || `La API respondio con error ${response.status}`);
     }
 
     if (!contentType.includes("application/json") && localHandler) {

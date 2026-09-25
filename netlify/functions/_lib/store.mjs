@@ -11,8 +11,13 @@ function clone(data) {
 }
 
 async function getBlobStore() {
-  const { getStore } = await import("@netlify/blobs");
-  return getStore("anniversary-memory-app");
+  try {
+    const { getStore } = await import("@netlify/blobs");
+    return getStore("anniversary-memory-app");
+  } catch (error) {
+    console.error("No se pudo inicializar Netlify Blobs:", error);
+    return null;
+  }
 }
 
 function getRuntimeStore() {
@@ -26,9 +31,15 @@ function getRuntimeStore() {
 async function readKey(key, fallbackValue) {
   const blobStore = await getBlobStore();
 
-  const blobValue = await blobStore.get(key, { type: "json" });
-  if (blobValue) {
-    return blobValue;
+  if (blobStore) {
+    try {
+      const blobValue = await blobStore.get(key, { type: "json" });
+      if (blobValue) {
+        return blobValue;
+      }
+    } catch (error) {
+      console.error(`No se pudo leer Netlify Blobs (${key}):`, error);
+    }
   }
 
   const runtimeStore = getRuntimeStore();
@@ -42,7 +53,17 @@ async function readKey(key, fallbackValue) {
 async function writeKey(key, value) {
   const blobStore = await getBlobStore();
 
-  await blobStore.setJSON(key, value);
+  if (blobStore) {
+    try {
+      await blobStore.setJSON(key, value);
+      return value;
+    } catch (error) {
+      console.error(`No se pudo guardar Netlify Blobs (${key}):`, error);
+    }
+  }
+
+  const runtimeStore = getRuntimeStore();
+  runtimeStore[key] = clone(value);
 
   return value;
 }
