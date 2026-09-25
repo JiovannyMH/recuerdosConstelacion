@@ -1356,7 +1356,7 @@ function App() {
       setError("");
       setMessage(`Archivo listo: ${file.name}`);
     } catch (fileError) {
-      if (isImage) {
+      if (isImage && IS_LOCAL_APP) {
         try {
           const fallbackDataUrl = await compressImageAsDataUrl(file);
           const estimatedKb = Math.max(1, Math.round(dataUrlSizeInBytes(fallbackDataUrl) / 1024));

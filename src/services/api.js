@@ -110,6 +110,10 @@ function shouldUseLocalFallback(response, contentType) {
 
 async function request(path, options = {}, localHandler) {
   if (FORCE_LOCAL_API) {
+    if (!localHandler) {
+      throw new Error("La API no esta disponible en modo local");
+    }
+
     return localHandler();
   }
 
@@ -669,9 +673,6 @@ export async function uploadMemoryFile(token, file) {
         contentType: file.type,
         sizeBytes: file.size,
       }),
-    },
-    () => {
-      throw new Error("La subida multimedia requiere la API de Netlify activa");
     },
   );
 
