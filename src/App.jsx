@@ -975,8 +975,8 @@ function App() {
     }
   }, [isViewerRole]);
 
-  async function refreshMemories() {
-    const data = await getMemories();
+  async function refreshMemories(authToken = token) {
+    const data = await getMemories(authToken);
     const list = Array.isArray(data.constellations) ? data.constellations : [];
     const timelineList = normalizeTimelineConstellations(list);
     setConstellations(list);
@@ -1021,7 +1021,7 @@ function App() {
   const bootstrap = useEffectEvent(async (authToken) => {
     const meData = await me(authToken);
     setUser(meData.user);
-    const list = await refreshMemories();
+    const list = await refreshMemories(authToken);
     const preferredMode = getStoredSessionStartMode(meData.user.username);
     setSessionStartMode(preferredMode);
     setSessionStartModeDirty(false);

@@ -606,12 +606,12 @@ export async function me(token) {
   );
 }
 
-export async function getMemories() {
+export async function getMemories(token) {
   return request(
     "/memories",
     {
       method: "GET",
-      headers: withAuth(),
+      headers: withAuth(token),
     },
     () => localGetMemories(),
   );
