@@ -5,6 +5,7 @@ import {
 } from "../../../shared/constellations.mjs";
 
 const DEFAULT_ROLE_OVERRIDES = {};
+const IS_NETLIFY_RUNTIME = process.env.NETLIFY === "true";
 
 function clone(data) {
   return JSON.parse(JSON.stringify(data));
@@ -43,6 +44,12 @@ function getRuntimeStore() {
 async function readKey(key, fallbackValue) {
   const blobStore = await getBlobStore();
 
+  if (!blobStore && IS_NETLIFY_RUNTIME) {
+    throw new Error(
+      "Netlify Blobs no esta disponible. Configura NETLIFY_SITE_ID y NETLIFY_AUTH_TOKEN.",
+    );
+  }
+
   if (blobStore) {
     try {
       const blobValue = await blobStore.get(key, { type: "json" });
@@ -64,6 +71,12 @@ async function readKey(key, fallbackValue) {
 
 async function writeKey(key, value) {
   const blobStore = await getBlobStore();
+
+  if (!blobStore && IS_NETLIFY_RUNTIME) {
+    throw new Error(
+      "Netlify Blobs no esta disponible. Configura NETLIFY_SITE_ID y NETLIFY_AUTH_TOKEN.",
+    );
+  }
 
   if (blobStore) {
     try {

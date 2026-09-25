@@ -433,9 +433,13 @@ function normalizeTimelineConstellations(list) {
     });
 
     if (monthMap.size === 12) {
-      return Array.from(monthMap.entries())
+      const monthlyList = Array.from(monthMap.entries())
         .sort((left, right) => left[0] - right[0])
         .map((entry) => entry[1]);
+      const monthlyIds = new Set(monthlyList.map((constellation) => constellation.id));
+      const customList = source.filter((constellation) => !monthlyIds.has(constellation.id));
+
+      return [...monthlyList, ...customList];
     }
   }
 
@@ -1178,7 +1182,25 @@ function App() {
         },
       });
 
-      setConstellations(data.constellations || []);
+      const nextConstellations = data.constellations || [];
+      const createdConstellation = nextConstellations[nextConstellations.length - 1];
+      setConstellations(nextConstellations);
+      if (createdConstellation) {
+        const nextTimeline = normalizeTimelineConstellations(nextConstellations);
+        const createdIndex = nextTimeline.findIndex(
+          (constellation) => constellation.id === createdConstellation.id,
+        );
+
+        if (createdIndex >= 0) {
+          setCurrentIndex(createdIndex);
+        }
+
+        setNewMemory((prev) => ({
+          ...prev,
+          constellationId: createdConstellation.id,
+          targetMemoryId: "",
+        }));
+      }
       setNewConstellation({ title: "", subtitle: "" });
       setMessage("Constelación creada.");
     } catch (requestError) {
@@ -2522,14 +2544,7 @@ function App() {
                       <option value="" disabled>
                         Selecciona...
                       </option>
-                      {constellations
-                        .filter(
-                          (constellation) =>
-                            Number.isInteger(constellation.month) &&
-                            constellation.month >= 1 &&
-                            constellation.month <= 12,
-                        )
-                        .map((constellation) => (
+                      {constellations.map((constellation) => (
                         <option key={constellation.id} value={constellation.id}>
                           {`${constellation.title}${
                             Number.isInteger(constellation.month) &&
