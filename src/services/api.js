@@ -16,6 +16,7 @@ const MEMORY_STORAGE_FALLBACK = new Map();
 const FORCE_LOCAL_API =
   import.meta.env.VITE_FORCE_LOCAL_API === "true" ||
   (typeof window !== "undefined" && window.location.protocol === "file:");
+const ENABLE_LOCAL_FALLBACK = import.meta.env.VITE_ENABLE_LOCAL_FALLBACK === "true";
 
 const DEFAULT_USERS = [
   {
@@ -101,11 +102,10 @@ function setStorageItemSafely(key, rawValue) {
 }
 
 function shouldUseLocalFallback(response, contentType) {
-  if (FORCE_LOCAL_API) {
-    return true;
-  }
-
-  return response.status === 404 || (contentType && contentType.includes("text/html"));
+  return (
+    ENABLE_LOCAL_FALLBACK &&
+    (response.status === 404 || (contentType && contentType.includes("text/html")))
+  );
 }
 
 async function request(path, options = {}, localHandler) {
@@ -137,7 +137,7 @@ async function request(path, options = {}, localHandler) {
 
     return body;
   } catch (error) {
-    if (localHandler) {
+    if (localHandler && ENABLE_LOCAL_FALLBACK) {
       return localHandler();
     }
 
