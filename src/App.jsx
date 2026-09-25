@@ -245,6 +245,38 @@ function hasPositionCollision(items, x, y, minDistance = 8) {
   });
 }
 
+function doesDropPreviewOverlapAnotherStar(itemId, position, items, displayItemById, fieldSize) {
+  const fieldWidth = Number(fieldSize?.width) || 0;
+  const fieldHeight = Number(fieldSize?.height) || 0;
+
+  if (!fieldWidth || !fieldHeight) {
+    return false;
+  }
+
+  const previewLeft = (Number(position.x) / 100) * fieldWidth - 22;
+  const previewRight = previewLeft + 44;
+  const previewTop = (Number(position.y) / 100) * fieldHeight - 58 * 1.15;
+  const previewBottom = previewTop + 58;
+
+  return items.some((item) => {
+    if (item.id === itemId) {
+      return false;
+    }
+
+    const starPosition = displayItemById[item.id] || item;
+    const starX = (Number(starPosition.x) / 100) * fieldWidth;
+    const starY = (Number(starPosition.y) / 100) * fieldHeight;
+    const starRadius = 9;
+
+    return (
+      previewLeft < starX + starRadius &&
+      previewRight > starX - starRadius &&
+      previewTop < starY + starRadius &&
+      previewBottom > starY - starRadius
+    );
+  });
+}
+
 function buildDisplayItemMap(items) {
   const sourceItems = Array.isArray(items) ? items : [];
   const groups = new Map();
@@ -691,74 +723,67 @@ function App() {
     return Math.max(0, Math.min(START_MONTH - 1, timelineList.length - 1));
   }
 
-  function getLastMemoryIndexForList(list) {
+  function getLastMemoryPositionForList(list) {
     const timelineList = normalizeTimelineConstellations(list);
 
     if (timelineList.length === 0) {
-      return 0;
+      return { index: 0, year: START_YEAR };
     }
 
-    const constellationByMonth = new Map();
+    const storyMonthOrder = new Map(
+      Array.from({ length: 12 }, (_, index) => [((START_MONTH - 1 + index) % 12) + 1, index]),
+    );
+    const candidates = [];
+
     timelineList.forEach((constellation, index) => {
       const month = Number(constellation?.month);
-      if (Number.isInteger(month) && month >= 1 && month <= 12 && !constellationByMonth.has(month)) {
-        constellationByMonth.set(month, { constellation, index });
+      const monthOrder = storyMonthOrder.get(month);
+      const items = Array.isArray(constellation?.items) ? constellation.items : [];
+
+      if (!Number.isInteger(monthOrder) || items.length === 0) {
+        return;
       }
+
+      items.forEach((item, itemIndex) => {
+        if (!isCompleteMemoryForNavigation(item)) {
+          return;
+        }
+
+        const explicitYear = Number(item?.year);
+        candidates.push({
+          index,
+          itemIndex,
+          year: Number.isInteger(explicitYear) ? explicitYear : resolveStoryYearForMonth(month),
+          monthOrder,
+        });
+      });
     });
 
-    const storyMonthOrder = Array.from({ length: 12 }, (_, index) => ((START_MONTH - 1 + index) % 12) + 1);
+    if (candidates.length === 0) {
+      const fallback = timelineList
+        .map((constellation, index) => ({ constellation, index }))
+        .filter(({ constellation }) => Array.isArray(constellation?.items) && constellation.items.length > 0)
+        .at(-1);
 
-    let lastWithImageIndex = -1;
-    for (let orderIndex = 0; orderIndex < storyMonthOrder.length; orderIndex += 1) {
-      const month = storyMonthOrder[orderIndex];
-      const entry = constellationByMonth.get(month);
-      if (!entry) {
-        continue;
-      }
-
-      const items = Array.isArray(entry.constellation?.items) ? entry.constellation.items : [];
-      if (items.some((item) => hasRealImageMemory(item))) {
-        lastWithImageIndex = entry.index;
-      }
+      return {
+        index: fallback?.index ?? timelineList.length - 1,
+        year: resolveInitialYearForMonth(Number(fallback?.constellation?.month)),
+      };
     }
 
-    if (lastWithImageIndex >= 0) {
-      return lastWithImageIndex;
-    }
-
-    let lastWithItemsIndex = -1;
-    for (let orderIndex = 0; orderIndex < storyMonthOrder.length; orderIndex += 1) {
-      const month = storyMonthOrder[orderIndex];
-      const entry = constellationByMonth.get(month);
-      if (!entry) {
-        continue;
+    const latest = candidates.reduce((current, candidate) => {
+      if (candidate.year !== current.year) {
+        return candidate.year > current.year ? candidate : current;
       }
 
-      const items = Array.isArray(entry.constellation?.items) ? entry.constellation.items : [];
-      if (items.length > 0) {
-        lastWithItemsIndex = entry.index;
+      if (candidate.monthOrder !== current.monthOrder) {
+        return candidate.monthOrder > current.monthOrder ? candidate : current;
       }
-    }
 
-    if (lastWithItemsIndex >= 0) {
-      return lastWithItemsIndex;
-    }
+      return candidate.itemIndex >= current.itemIndex ? candidate : current;
+    });
 
-    for (let index = timelineList.length - 1; index >= 0; index -= 1) {
-      const items = Array.isArray(timelineList[index]?.items) ? timelineList[index].items : [];
-      if (items.some((item) => hasRealImageMemory(item))) {
-        return index;
-      }
-    }
-
-    for (let index = timelineList.length - 1; index >= 0; index -= 1) {
-      const items = Array.isArray(timelineList[index]?.items) ? timelineList[index].items : [];
-      if (items.length > 0) {
-        return index;
-      }
-    }
-
-    return timelineList.length - 1;
+    return { index: latest.index, year: latest.year };
   }
 
   function resolveInitialYearForMonth(monthValue) {
@@ -780,10 +805,9 @@ function App() {
     const safeMode = mode === "ultimo" ? "ultimo" : "inicio";
 
     if (safeMode === "ultimo") {
-      const targetIndex = getLastMemoryIndexForList(timelineList);
-      const targetMonth = Number(timelineList[targetIndex]?.month);
-      setTimelineYear(resolveInitialYearForMonth(targetMonth));
-      setCurrentIndex(targetIndex);
+      const target = getLastMemoryPositionForList(timelineList);
+      setTimelineYear(target.year);
+      setCurrentIndex(target.index);
       return;
     }
 
@@ -2026,7 +2050,8 @@ function App() {
 
       if (
         !isPreviewCandidate ||
-        hasPositionCollision(acceptedPositions, Number(position.x), Number(position.y), 8)
+        hasPositionCollision(acceptedPositions, Number(position.x), Number(position.y), 8) ||
+        doesDropPreviewOverlapAnotherStar(item.id, position, items, displayItemById, starFieldSize)
       ) {
         visible[item.id] = false;
         return;
@@ -2037,7 +2062,7 @@ function App() {
     });
 
     return visible;
-  }, [alwaysVisibleDropId, currentConstellation, displayItemById, timelineYear]);
+  }, [alwaysVisibleDropId, currentConstellation, displayItemById, starFieldSize, timelineYear]);
 
   const activeHoveredStarId =
     (currentConstellation?.items || []).some((item) => item.id === hoveredStarId) ? hoveredStarId : "";

@@ -614,7 +614,7 @@ button:disabled {
   z-index: 6;
   width: 44px;
   height: 58px;
-  transform: translate(-50%, -172%);
+  transform: translate(-50%, -115%);
   overflow: hidden;
   clip-path: path("M 22 58 C 8 45 3 35 3 25 C 3 11 11 2 22 2 C 33 2 41 11 41 25 C 41 35 36 45 22 58 Z");
   border: 1px solid rgba(236, 246, 255, 0.8);
@@ -629,7 +629,7 @@ button:disabled {
 
 .memory-drop-preview:hover,
 .memory-drop-preview:active {
-  transform: translate(-50%, -172%);
+  transform: translate(-50%, -115%);
   box-shadow:
     0 0 10px rgba(187, 219, 255, 0.48),
     0 8px 16px rgba(5, 16, 33, 0.45);
