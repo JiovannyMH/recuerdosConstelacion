@@ -132,7 +132,11 @@ async function request(path, options = {}, localHandler) {
     }
 
     if (!contentType.includes("application/json") && localHandler) {
-      return localHandler();
+      if (ENABLE_LOCAL_FALLBACK) {
+        return localHandler();
+      }
+
+      throw new Error("La API no esta disponible. Usa Netlify o ejecuta netlify dev.");
     }
 
     return body;
