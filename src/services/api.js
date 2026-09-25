@@ -314,6 +314,7 @@ function normalizeMemory(memoryInput) {
       : "text",
     title: String(memoryInput.title || "Sin titulo"),
     description: String(memoryInput.description || ""),
+    year: Number.isInteger(Number(memoryInput.year)) ? Number(memoryInput.year) : undefined,
     url: memoryInput.url ? String(memoryInput.url) : "",
     objectKey: memoryInput.objectKey ? String(memoryInput.objectKey) : "",
     x: Number.isFinite(Number(memoryInput.x)) ? Number(memoryInput.x) : 50,

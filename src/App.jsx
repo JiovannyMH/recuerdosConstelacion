@@ -1267,6 +1267,7 @@ function App() {
                 type: newMemory.type,
                 title: newMemory.title,
                 description: newMemory.description,
+                year: timelineYear,
                 objectKey: newMemory.objectKey,
                 url:
                   newMemory.type === "image" && !/^data:image\//i.test(String(newMemory.url || "").trim())
@@ -1281,6 +1282,7 @@ function App() {
                 type: newMemory.type,
                 title: newMemory.title,
                 description: newMemory.description,
+                year: timelineYear,
                 objectKey: newMemory.objectKey,
                 url:
                   newMemory.type === "image" && !/^data:image\//i.test(String(newMemory.url || "").trim())
@@ -1992,6 +1994,38 @@ function App() {
 
     return firstWithImage?.id || items[0]?.id || "";
   }, [currentConstellation, timelineYear]);
+
+  const visibleDropPreviewByItemId = useMemo(() => {
+    const items = currentConstellation?.items || [];
+    const constellationMonth = Number(currentConstellation?.month);
+    const orderedItems = [
+      ...items.filter((item) => item.id === alwaysVisibleDropId),
+      ...items.filter((item) => item.id !== alwaysVisibleDropId),
+    ];
+    const acceptedPositions = [];
+    const visible = {};
+
+    orderedItems.forEach((item) => {
+      const visibleItem = getMemoryForTimeline(item, constellationMonth, timelineYear);
+      const isPreviewCandidate =
+        item.id === alwaysVisibleDropId || hasRealImageMemory(visibleItem);
+      const position = displayItemById[item.id] || item;
+
+      if (
+        !isPreviewCandidate ||
+        hasPositionCollision(acceptedPositions, Number(position.x), Number(position.y), 8)
+      ) {
+        visible[item.id] = false;
+        return;
+      }
+
+      acceptedPositions.push(position);
+      visible[item.id] = true;
+    });
+
+    return visible;
+  }, [alwaysVisibleDropId, currentConstellation, displayItemById, timelineYear]);
+
   const activeHoveredStarId =
     (currentConstellation?.items || []).some((item) => item.id === hoveredStarId) ? hoveredStarId : "";
 
@@ -2325,7 +2359,9 @@ function App() {
               return (
               <Fragment key={memory.id}>
                 {isOriginalConstellationStar &&
-                  (hasRealImageByItemId[memory.id] || memory.id === alwaysVisibleDropId || activeHoveredStarId === memory.id) &&
+                  ((visibleDropPreviewByItemId[memory.id] &&
+                    (hasRealImageByItemId[memory.id] || memory.id === alwaysVisibleDropId)) ||
+                    activeHoveredStarId === memory.id) &&
                   dropPreviewByItemId[memory.id] && (
                   <button
                     type="button"
