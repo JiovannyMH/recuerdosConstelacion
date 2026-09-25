@@ -22,18 +22,25 @@ function currentUserFromPayload(payload, roleOverrides) {
 }
 
 function normalizeMemory(memoryInput) {
+  const objectKey =
+    memoryInput.objectKey && isAllowedObjectKey(String(memoryInput.objectKey))
+      ? String(memoryInput.objectKey)
+      : "";
+  const mediaType = objectKey.startsWith("memories/images/")
+    ? "image"
+    : objectKey.startsWith("memories/videos/")
+      ? "video"
+      : null;
+
   return {
     id: memoryInput.id || crypto.randomUUID(),
-    type: ["image", "video", "text"].includes(memoryInput.type)
+    type: mediaType || (["image", "video", "text"].includes(memoryInput.type)
       ? memoryInput.type
-      : "text",
+      : "text"),
     title: String(memoryInput.title || "Sin titulo"),
     description: String(memoryInput.description || ""),
     url: memoryInput.url ? String(memoryInput.url) : "",
-    objectKey:
-      memoryInput.objectKey && isAllowedObjectKey(String(memoryInput.objectKey))
-        ? String(memoryInput.objectKey)
-        : "",
+    objectKey,
     x: Number.isFinite(Number(memoryInput.x)) ? Number(memoryInput.x) : 50,
     y: Number.isFinite(Number(memoryInput.y)) ? Number(memoryInput.y) : 50,
   };

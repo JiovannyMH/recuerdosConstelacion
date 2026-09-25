@@ -2594,11 +2594,16 @@ function App() {
                                   setNewMemory((prev) => ({
                                     ...prev,
                                     targetMemoryId: memory.id,
-                                    type: memory.type || "text",
-                                    title: memory.title || "",
-                                    description: memory.description || "",
-                                    url: memory.url || "",
-                                    objectKey: memory.objectKey || "",
+                                    type: prev.objectKey || /^data:(image|video)\//i.test(prev.url)
+                                      ? prev.type
+                                      : memory.type || "text",
+                                    title: prev.title || memory.title || "",
+                                    description: prev.description || memory.description || "",
+                                    url:
+                                      prev.objectKey || /^data:(image|video)\//i.test(prev.url)
+                                        ? prev.url
+                                        : memory.url || "",
+                                    objectKey: prev.objectKey || memory.objectKey || "",
                                   }));
                                   setHoveredStarId(memory.id);
                                   setIsStarPickerOpen(false);
