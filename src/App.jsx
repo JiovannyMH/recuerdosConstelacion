@@ -232,6 +232,19 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+function hasPositionCollision(items, x, y, minDistance = 8) {
+  return (items || []).some((item) => {
+    const itemX = Number(item?.x);
+    const itemY = Number(item?.y);
+
+    if (!Number.isFinite(itemX) || !Number.isFinite(itemY)) {
+      return false;
+    }
+
+    return Math.hypot(itemX - x, itemY - y) < minDistance;
+  });
+}
+
 function buildDisplayItemMap(items) {
   const sourceItems = Array.isArray(items) ? items : [];
   const groups = new Map();
