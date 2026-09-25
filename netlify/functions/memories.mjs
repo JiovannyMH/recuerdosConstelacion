@@ -219,9 +219,15 @@ export async function handler(event) {
     const constellationId = String(body.constellationId || "");
     const memoryId = String(body.memoryId || "");
     const updates = body.updates || {};
-    const currentMemory = currentConstellations
-      .find((constellation) => constellation.id === constellationId)
-      ?.items?.find((memory) => memory.id === memoryId);
+    const currentConstellation = currentConstellations.find(
+      (constellation) => constellation.id === constellationId,
+    );
+    const currentMemory = currentConstellation?.items?.find((memory) => memory.id === memoryId);
+
+    if (!currentConstellation || !currentMemory) {
+      return jsonResponse(404, { message: "No se encontro la estrella que intentas actualizar" });
+    }
+
     const nextObjectKey =
       updates.objectKey !== undefined ? String(updates.objectKey || "") : currentMemory?.objectKey || "";
 
@@ -249,7 +255,8 @@ export async function handler(event) {
     };
 
     await saveConstellationsData(nextState);
-    return jsonResponse(200, await addSignedMediaUrls(nextState));
+    const persistedState = await getConstellationsData();
+    return jsonResponse(200, await addSignedMediaUrls(persistedState));
   }
 
   if (action === "deleteMemory") {

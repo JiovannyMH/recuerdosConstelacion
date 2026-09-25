@@ -6,6 +6,7 @@ import {
   getUsers,
   login,
   me,
+  deleteUploadedMedia,
   uploadMemoryFile,
   uploadMemoryImage,
   updateMemories,
@@ -1328,9 +1329,12 @@ function App() {
       return;
     }
 
+    let uploadedObjectKey = "";
+
     try {
       if (!IS_LOCAL_APP) {
         const uploadResponse = await uploadMemoryFile(token, file);
+        uploadedObjectKey = uploadResponse.objectKey;
 
         setNewMemory((prev) => ({
           ...prev,
@@ -1371,6 +1375,14 @@ function App() {
       setError("");
       setMessage(`Archivo listo: ${file.name}`);
     } catch (fileError) {
+      if (!IS_LOCAL_APP && uploadedObjectKey) {
+        try {
+          await deleteUploadedMedia(token, uploadedObjectKey);
+        } catch {
+          // Keep the original upload error visible when cleanup also fails.
+        }
+      }
+
       if (isImage && IS_LOCAL_APP) {
         try {
           const fallbackDataUrl = await compressImageAsDataUrl(file);

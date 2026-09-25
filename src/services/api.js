@@ -690,3 +690,11 @@ export async function uploadMemoryFile(token, file) {
 
   return uploadData;
 }
+
+export async function deleteUploadedMedia(token, objectKey) {
+  return request("/media", {
+    method: "DELETE",
+    headers: withAuth(token),
+    body: JSON.stringify({ objectKey }),
+  });
+}
