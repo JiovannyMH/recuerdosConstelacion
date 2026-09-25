@@ -1138,6 +1138,17 @@ function App() {
     const nextMode = event.target.value === "ultimo" ? "ultimo" : "inicio";
     setSessionStartMode(nextMode);
     setSessionStartModeDirty(true);
+
+    if (user?.username) {
+      setStoredSessionStartMode(user.username, nextMode);
+      applySessionStartPreference(user.username, constellations, nextMode);
+      setMessage(
+        nextMode === "ultimo"
+          ? "Ahora abrira en el ultimo recuerdo."
+          : "Ahora abrira desde el comienzo.",
+      );
+      setError("");
+    }
   }
 
   function saveSessionStartModePreference() {
