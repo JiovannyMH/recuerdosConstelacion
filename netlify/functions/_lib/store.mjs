@@ -13,6 +13,18 @@ function clone(data) {
 async function getBlobStore() {
   try {
     const { getStore } = await import("@netlify/blobs");
+
+    const siteID = String(process.env.NETLIFY_SITE_ID || "").trim();
+    const token = String(process.env.NETLIFY_AUTH_TOKEN || "").trim();
+
+    if (siteID && token) {
+      return getStore({
+        name: "anniversary-memory-app",
+        siteID,
+        token,
+      });
+    }
+
     return getStore("anniversary-memory-app");
   } catch (error) {
     console.error("No se pudo inicializar Netlify Blobs:", error);
